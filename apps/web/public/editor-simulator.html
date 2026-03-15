@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="sim.pageTitle">malziSPACE Editor Simulator</title>
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="assets/space.css" />
+</head>
+<body>
+  <div class="sim-shell">
+    <header class="card sim-card-stack">
+      <h1 class="sim-heading" data-i18n="sim.heading">Editor Simulator</h1>
+      <p class="sim-note" data-i18n="sim.note">Automatischer Test für Toolbar-Befehle gegen den modularen Editor.</p>
+      <div id="simResults" class="sim-results" data-i18n="sim.results.running">Tests laufen …</div>
+    </header>
+
+    <header class="toolbar card stuck">
+      <div class="line-1">
+        <span class="title-label" data-i18n="space.title.label">Titel</span>
+        <span id="titleView" class="title" contenteditable="true" spellcheck="false" data-placeholder="Ohne Titel" data-i18n-placeholder="space.title.placeholder"></span>
+        <div class="toolbar-actions">
+          <button id="showQr" class="btn" type="button" data-i18n="space.button.share">Teilen</button>
+        </div>
+        <span id="presence" class="pill">…</span>
+        <span id="status" class="status-dot status-dot--ok" title="Verbunden" data-i18n-title="status.connected" aria-label="Verbunden" data-i18n-aria-label="status.connected"></span>
+      </div>
+    </header>
+
+    <div id="expiredNotice" class="expired-banner" hidden>
+      <span data-i18n="space.expired.notice">Dieser Space ist abgelaufen und wurde nach 24&nbsp;Stunden automatisch gelöscht.</span>
+      <a class="expired-link" href="https://malzi.space" data-i18n="space.expired.back">Zur Startseite</a>
+    </div>
+
+    <main class="card editor-wrap">
+      <div id="editorToolbar" class="editor-tools" role="toolbar" aria-label="Textformatierung" data-i18n-aria-label="toolbar.aria">
+        <button type="button" class="tool-btn icon" data-cmd="bold" title="Fett" aria-label="Fett" data-i18n-title="toolbar.bold" data-i18n-aria-label="toolbar.bold"><strong>B</strong></button>
+        <button type="button" class="tool-btn icon" data-cmd="italic" title="Kursiv" aria-label="Kursiv" data-i18n-title="toolbar.italic" data-i18n-aria-label="toolbar.italic"><em>I</em></button>
+        <button type="button" class="tool-btn icon" data-cmd="underline" title="Unterstrichen" aria-label="Unterstrichen" data-i18n-title="toolbar.underline" data-i18n-aria-label="toolbar.underline"><u>U</u></button>
+        <span class="tool-sep" aria-hidden="true"></span>
+        <button type="button" class="tool-btn icon" data-cmd="insertUnorderedList" title="Aufzählung" aria-label="Aufzählung" data-i18n-title="toolbar.unordered" data-i18n-aria-label="toolbar.unordered">•</button>
+        <button type="button" class="tool-btn icon" data-cmd="insertOrderedList" title="Nummerierte Liste" aria-label="Nummerierte Liste" data-i18n-title="toolbar.ordered" data-i18n-aria-label="toolbar.ordered">1.</button>
+        <span class="tool-sep" aria-hidden="true"></span>
+        <button type="button" class="tool-btn icon" data-cmd="justifyLeft" title="Linksbündig" aria-label="Linksbündig" data-i18n-title="toolbar.alignLeft" data-i18n-aria-label="toolbar.alignLeft">L</button>
+        <button type="button" class="tool-btn icon" data-cmd="justifyCenter" title="Zentriert" aria-label="Zentriert" data-i18n-title="toolbar.alignCenter" data-i18n-aria-label="toolbar.alignCenter">C</button>
+        <button type="button" class="tool-btn icon" data-cmd="justifyRight" title="Rechtsbündig" aria-label="Rechtsbündig" data-i18n-title="toolbar.alignRight" data-i18n-aria-label="toolbar.alignRight">R</button>
+        <button type="button" class="tool-btn icon" data-cmd="justifyFull" title="Blocksatz" aria-label="Blocksatz" data-i18n-title="toolbar.alignJustify" data-i18n-aria-label="toolbar.alignJustify">J</button>
+        <span class="tool-sep" aria-hidden="true"></span>
+        <button type="button" class="tool-btn icon" data-cmd="createLink" title="Link" aria-label="Link" data-i18n-title="toolbar.linkShort" data-i18n-aria-label="toolbar.linkShort">🔗</button>
+        <button type="button" class="tool-btn icon" data-cmd="insertHorizontalRule" title="Horizontale Linie" aria-label="Horizontale Linie" data-i18n-title="toolbar.horizontalRule" data-i18n-aria-label="toolbar.horizontalRule">—</button>
+      </div>
+      <div class="copy-all-row">
+        <button id="copyAll" class="btn copy-all-btn" type="button" title="Kopieren" aria-label="Kopieren" data-i18n-title="space.button.copyAll" data-i18n-aria-label="space.button.copyAll"><span data-i18n="space.button.copyAll">Kopieren</span></button>
+      </div>
+      <div class="editor-pane">
+        <div id="lineNumbers" class="line-numbers" aria-hidden="true">
+          <div id="lineNumbersInner" class="line-numbers-inner"><div class="line-number">1</div></div>
+        </div>
+        <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Text hier einfügen …" data-i18n-placeholder="space.editor.placeholder"></div>
+      </div>
+    </main>
+
+    <div id="qrModal" class="modal" hidden>
+      <button id="qrModalBackdrop" class="modal-backdrop" type="button" aria-label="Schließen" data-i18n-aria-label="modal.close"></button>
+      <section class="card modal-card" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
+        <h2 id="qrModalTitle" data-i18n="qr.title">Space per QR teilen</h2>
+        <div id="qrCode" class="qr-code" aria-label="QR-Code" data-i18n-aria-label="qr.label"></div>
+        <p id="qrLinkText" class="qr-link-text"></p>
+        <div class="modal-actions">
+          <button id="copyQrLink" class="btn" type="button" data-i18n="space.button.copyQrLink">Link kopieren</button>
+          <button id="closeQrModal" class="btn" type="button" data-i18n="space.button.close">Schließen</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="linkModal" class="modal" hidden>
+      <button id="linkModalBackdrop" class="modal-backdrop" type="button" aria-label="Schließen" data-i18n-aria-label="modal.close"></button>
+      <section class="card modal-card modal-card--form" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
+        <h2 id="linkModalTitle" data-i18n="linkModal.title">Link einfügen</h2>
+        <p class="muted" data-i18n="linkModal.subtitle">Füge eine Adresse ein. Bei Bedarf wird automatisch https:// ergänzt.</p>
+        <label class="modal-field" for="linkUrlInput" data-i18n="linkModal.label">Adresse</label>
+        <input id="linkUrlInput" class="modal-input" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://example.com" data-i18n-placeholder="linkModal.placeholder" />
+        <div class="modal-actions">
+          <button id="saveLinkModal" class="btn primary" type="button" data-i18n="linkModal.confirm">Link übernehmen</button>
+          <button id="cancelLinkModal" class="btn" type="button" data-i18n="linkModal.cancel">Abbrechen</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="assets/i18n.js"></script>
+  <script src="assets/editor-simulator.js"></script>
+  <script type="module" src="assets/modules/app.js"></script>
+</body>
+</html>

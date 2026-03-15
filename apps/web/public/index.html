@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="landing.pageTitle">malziSPACE – paste. share. done.</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="shortcut icon" href="assets/logo.svg" />
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="assets/landing.css" />
+</head>
+<body>
+  <!-- malziSPACE header (based on malzilink) -->
+  <div class="topbar">
+    <div class="inner">
+      <div class="brand">
+        <a href="https://malzi.space">
+          <img class="logoimg" src="assets/logo.svg" alt="malziSPACE Logo">
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <header class="hero">
+      <h1 class="hero-headline" data-i18n="landing.hero.title">paste. share. done.</h1>
+      <p class="hero-sub" data-i18n="landing.hero.subtitle">Teile Text in Sekunden &ndash; verschl&uuml;sselt, ohne Login, automatisch gel&ouml;scht.</p>
+      <form id="createForm" class="hero-form">
+        <input type="text" id="spaceTitle" maxlength="80" placeholder="Titel (optional)" data-i18n-placeholder="landing.form.placeholder" />
+        <input type="text" id="mzWebsite" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" class="hp-field" />
+        <button type="submit" class="btn primary" data-i18n="landing.form.submit">Neuen Space erstellen</button>
+      </form>
+    </header>
+    <section class="info">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="icon" role="presentation">
+              <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 data-i18n="landing.info.zk.title">100% Ende‑zu‑Ende verschlüsselt</h3>
+            <p data-i18n="landing.info.zk.text">Der Text wird direkt in deinem Browser verschlüsselt. Der Schlüssel bleibt bei dir. Ohne diesen Schlüssel bleibt alles für uns unlesbarer Datenmüll.</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="icon" role="presentation">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 data-i18n="landing.info.tracking.title">Keine Konten, kein Tracking</h3>
+            <p data-i18n="landing.info.tracking.text">Du brauchst kein Login, keine E-Mail, kein Passwort. Wir bauen keine Profile und verfolgen dich nicht quer durchs Internet.</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="icon" role="presentation">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 7v5l3 3"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 data-i18n="landing.info.cleanup.title">Automatisches Aufräumen</h3>
+            <p data-i18n="landing.info.cleanup.text">Spaces sind zum gemeinsamen Arbeiten gedacht – nicht für eine Ewigkeit. Sie haben ein Ablaufdatum und werden nach 24 Stunden automatisch entfernt.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="opensource-box">
+      <a href="https://github.com/malziland/malzispace" target="_blank" rel="noopener noreferrer" class="opensource-link">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span data-i18n="landing.opensource.button">Open Source auf GitHub</span>
+      </a>
+    </div>
+
+    <div class="support-box">
+      <p class="support-headline" data-i18n="support.headline">Keine Paywall. Kein Bullshit.</p>
+      <p class="support-text" data-i18n="support.text">Und du h&auml;ltst es am Laufen.</p>
+      <a href="https://buymeacoffee.com/malzispace" target="_blank" rel="noopener noreferrer" class="support-btn" data-i18n="support.button">Jetzt Projekt unterst&uuml;tzen</a>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; 2026 malziSPACE &bull; powered by malziland</span>
+        <span class="footer-sep">&middot;</span>
+        <a href="impressum.html" data-i18n="site.footer.imprint">Impressum</a>
+        <span class="footer-sep">&middot;</span>
+        <a href="privacy.html" data-i18n="site.footer.privacy">Datenschutz</a>
+        <span class="footer-sep">&middot;</span>
+        <a href="agb.html" data-i18n="site.footer.terms">Nutzungsbedingungen</a>
+      </div>
+    </footer>
+  </div>
+
+  <div id="createSplash" class="splash" aria-live="polite" aria-busy="true">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="splash-text" data-i18n="landing.splash.default">malziSPACE wird initialisiert …</div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/site-i18n-dicts.js"></script>
+  <script src="assets/i18n.js"></script>
+  <script type="module" src="assets/appcheck.js"></script>
+  <script src="assets/index-create.js" defer></script>
+
+</body>
+</html>

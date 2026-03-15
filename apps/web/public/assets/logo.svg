@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2800 560" role="img" aria-label="malziSPACE | paste - share - done powered by malziland">
+  <!-- Left: malziSPACE -->
+  <text x="120" y="355" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" font-weight="900" font-size="220" fill="#FFFFFF" font-kerning="none" kerning="0">
+    malziSPACE
+  </text>
+
+  <!-- Divider (moved right so it never touches the wordmark) -->
+  <rect x="1450" y="110" width="10" height="340" rx="5" fill="#FFFFFF" opacity="0.35"/>
+
+  <!-- Right: subtitle + powered -->
+  <text x="1550" y="270" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" font-weight="650" font-size="80" fill="#FFFFFF" opacity="0.82" letter-spacing="0.45px" font-kerning="none" kerning="0">
+    Paste - share - done
+  </text>
+
+  <text x="1550" y="355" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" font-weight="600" font-size="34" fill="#FFFFFF" opacity="0.62" letter-spacing="0.25px" font-kerning="none" kerning="0">
+    powered by malziland
+  </text>
+</svg>

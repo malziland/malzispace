@@ -1,0 +1,36 @@
+{
+  "name": "malzispace",
+  "private": true,
+  "workspaces": [
+    "services/api",
+    "services/collab-relay",
+    "tests"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build:hosting": "node tools/bin/build_hosting.mjs",
+    "verify": "./ops/verify_local.sh",
+    "verify:live": "./ops/verify_live.sh",
+    "clean": "./ops/clean_local.sh",
+    "restore-point": "./ops/restore_point.sh",
+    "lint": "eslint .",
+    "test:repo:hygiene": "node tools/checks/check_repo_hygiene.mjs",
+    "test": "npm --workspaces --if-present test",
+    "test:coverage": "c8 --reporter=text --reporter=lcov npm test",
+    "test:coverage:check": "c8 --check-coverage --lines 85 --functions 85 --branches 75 --statements 85 npm test",
+    "test:e2e:simulator": "node tests/e2e/run_editor_simulator_e2e.mjs",
+    "test:e2e:mobile": "BASE_URL=http://127.0.0.1:4173 node tests/e2e/run_space_toolbar_mobile_e2e.mjs",
+    "test:e2e:i18n": "BASE_URL=http://127.0.0.1:4173 node tests/e2e/run_i18n_legal_checks.mjs",
+    "test:e2e:multiplayer:sim": "BASE_URL=http://127.0.0.1:4173 SIM=1 ENGINES=chromium node tests/e2e/run_multiplayer_checks.mjs"
+  },
+  "engines": {
+    "node": "24"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "c8": "^11.0.0",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "playwright": "^1.58.2"
+  }
+}

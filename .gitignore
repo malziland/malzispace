@@ -1,0 +1,31 @@
+# OS
+.DS_Store
+
+# Firebase local cache
+.firebase/
+
+# Node
+node_modules/
+tests/node_modules/
+services/api/node_modules/
+services/collab-relay/node_modules/
+
+# Logs
+*.log
+coverage/
+build/
+
+# Env files
+.env
+.env.*
+.secrets/
+keys/
+*.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.cer
+service-account*.json
+serviceAccount*.json
+firebase-admin*.json

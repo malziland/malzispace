@@ -1,0 +1,12 @@
+{
+  "name": "malzispace-tests",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node --test unit/**/*.test.mjs"
+  },
+  "dependencies": {
+    "yjs": "^13.6.18"
+  }
+}
