@@ -1,0 +1,61 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/api/package-lock.json
+            services/collab-relay/package-lock.json
+            tests/package-lock.json
+
+      - name: Install (root)
+        run: npm ci
+
+      - name: Install (api)
+        run: cd services/api && npm ci
+
+      - name: Install (collab-relay)
+        run: cd services/collab-relay && npm ci
+
+      - name: Audit (root prod deps)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit (api prod deps)
+        run: cd services/api && npm audit --omit=dev --audit-level=high
+
+      - name: Audit (collab-relay prod deps)
+        run: cd services/collab-relay && npm audit --omit=dev --audit-level=high
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify
+        run: ./ops/verify_local.sh

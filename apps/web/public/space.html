@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://www.gstatic.com https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.googleapis.com wss://malzispace-collab-457350771644.europe-west3.run.app; upgrade-insecure-requests" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>malziSPACE – Space</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="shortcut icon" href="assets/logo.svg" />
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="assets/space.css" />
+</head>
+<body>
+  <!-- malziSPACE header (based on malzilink) -->
+  <div class="topbar">
+    <div class="inner">
+      <div class="brand">
+        <a href="https://malzi.space">
+          <img class="logoimg" src="assets/logo.svg" alt="malziSPACE Logo">
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <header class="toolbar card stuck">
+      <div class="line-1">
+        <span id="titleLabel" class="title-label" hidden data-i18n="space.title.label">Titel</span>
+        <span id="titleView" class="title" hidden></span>
+        <div class="toolbar-actions">
+          <button id="showQr" class="btn" type="button" data-i18n="space.button.share">Teilen</button>
+        </div>
+        <span id="presence" class="pill">…</span>
+        <span id="status" class="status-dot status-dot--ok" title="Verbunden" data-i18n-title="status.connected" aria-label="Verbunden" data-i18n-aria-label="status.connected"></span>
+      </div>
+    </header>
+
+    <div id="expiredNotice" class="expired-banner" hidden>
+      <span data-i18n="space.expired.notice">Dieser Space ist abgelaufen und wurde nach 24&nbsp;Stunden automatisch gelöscht.</span>
+      <a class="expired-link" href="https://malzi.space" data-i18n="space.expired.back">Zur Startseite</a>
+    </div>
+
+    <main class="card editor-wrap">
+      <div id="editorToolbar" class="editor-tools" role="toolbar" aria-label="Textformatierung" data-i18n-aria-label="toolbar.aria">
+        <div class="tool-group" aria-label="Textstil" data-i18n-aria-label="toolbar.group.textStyle">
+          <button type="button" class="tool-btn icon" data-cmd="bold" title="Fett" aria-label="Fett" data-i18n-title="toolbar.bold" data-i18n-aria-label="toolbar.bold"><span class="btn-icon txt" aria-hidden="true"><strong>B</strong></span></button>
+          <button type="button" class="tool-btn icon" data-cmd="italic" title="Kursiv" aria-label="Kursiv" data-i18n-title="toolbar.italic" data-i18n-aria-label="toolbar.italic"><span class="btn-icon txt" aria-hidden="true"><em>I</em></span></button>
+          <button type="button" class="tool-btn icon" data-cmd="underline" title="Unterstrichen" aria-label="Unterstrichen" data-i18n-title="toolbar.underline" data-i18n-aria-label="toolbar.underline"><span class="btn-icon txt" aria-hidden="true"><u>U</u></span></button>
+        </div>
+        <div class="tool-group" aria-label="Ausrichtung" data-i18n-aria-label="toolbar.group.alignment">
+          <button type="button" class="tool-btn icon" data-cmd="justifyLeft" title="Linksbündig" aria-label="Linksbündig" data-i18n-title="toolbar.alignLeft" data-i18n-aria-label="toolbar.alignLeft">
+            <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h12M3 14h18M3 18h12"/></svg></span>
+          </button>
+          <button type="button" class="tool-btn icon" data-cmd="justifyCenter" title="Zentriert" aria-label="Zentriert" data-i18n-title="toolbar.alignCenter" data-i18n-aria-label="toolbar.alignCenter">
+            <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18M6 10h12M3 14h18M6 18h12"/></svg></span>
+          </button>
+          <button type="button" class="tool-btn icon" data-cmd="justifyRight" title="Rechtsbündig" aria-label="Rechtsbündig" data-i18n-title="toolbar.alignRight" data-i18n-aria-label="toolbar.alignRight">
+            <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18M9 10h12M3 14h18M9 18h12"/></svg></span>
+          </button>
+        </div>
+        <div class="tool-group" aria-label="Listen" data-i18n-aria-label="toolbar.group.lists">
+          <button type="button" class="tool-btn icon" data-cmd="insertUnorderedList" title="Aufzählung" aria-label="Aufzählung" data-i18n-title="toolbar.unordered" data-i18n-aria-label="toolbar.unordered">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M9 7h11M9 12h11M9 17h11"/><path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01"/></svg>
+            </span>
+          </button>
+          <button type="button" class="tool-btn icon" data-cmd="insertOrderedList" title="Nummerierte Liste" aria-label="Nummerierte Liste" data-i18n-title="toolbar.ordered" data-i18n-aria-label="toolbar.ordered">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3.5 7h3M5 6v4M3.5 14h3l-3 3h3"/><path d="M9 7h11M9 12h11M9 17h11"/></svg>
+            </span>
+          </button>
+          <button type="button" class="tool-btn icon" data-cmd="createLink" title="Link einfügen" aria-label="Link einfügen" data-i18n-title="toolbar.createLink" data-i18n-aria-label="toolbar.createLink">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M10.5 13.5a3.5 3.5 0 0 1 0-5l2.2-2.2a3.5 3.5 0 1 1 4.9 4.9l-1.2 1.2"/>
+                <path d="M13.5 10.5a3.5 3.5 0 0 1 0 5l-2.2 2.2a3.5 3.5 0 1 1-4.9-4.9l1.2-1.2"/>
+                <path d="M9 15l6-6"/>
+              </svg>
+            </span>
+          </button>
+          <button type="button" class="tool-btn icon" data-cmd="insertHorizontalRule" title="Horizontale Linie" aria-label="Horizontale Linie" data-i18n-title="toolbar.horizontalRule" data-i18n-aria-label="toolbar.horizontalRule">—</button>
+        </div>
+      </div>
+      <div class="copy-all-row">
+        <button id="copyAll" class="btn copy-all-btn" title="Kopieren" aria-label="Kopieren" data-i18n-title="space.button.copyAll" data-i18n-aria-label="space.button.copyAll">
+          <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1Zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H10V7h9v14Z"/>
+          </svg>
+          <span data-i18n="space.button.copyAll">Kopieren</span>
+        </button>
+      </div>
+      <div class="editor-pane">
+        <div id="lineNumbers" class="line-numbers" aria-hidden="true">
+          <div id="lineNumbersInner" class="line-numbers-inner"><div class="line-number">1</div></div>
+        </div>
+        <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Text hier einfügen …" data-i18n-placeholder="space.editor.placeholder"></div>
+      </div>
+    </main>
+
+    <div id="qrModal" class="modal" hidden>
+      <button id="qrModalBackdrop" class="modal-backdrop" type="button" aria-label="Schließen" data-i18n-aria-label="modal.close"></button>
+      <section class="card modal-card" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
+        <h2 id="qrModalTitle" data-i18n="qr.title">Space per QR teilen</h2>
+        <p class="muted" data-i18n="qr.subtitle">Scanne den QR-Code oder kopiere den Link.</p>
+        <div id="qrCode" class="qr-code" aria-label="QR-Code" data-i18n-aria-label="qr.label"></div>
+        <p id="qrLinkText" class="qr-link-text"></p>
+        <div class="modal-actions">
+          <button id="copyQrLink" class="btn" type="button" data-i18n="space.button.copyQrLink">Link kopieren</button>
+          <button id="closeQrModal" class="btn" type="button" data-i18n="space.button.close">Schließen</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="linkModal" class="modal" hidden>
+      <button id="linkModalBackdrop" class="modal-backdrop" type="button" aria-label="Schließen" data-i18n-aria-label="modal.close"></button>
+      <section class="card modal-card modal-card--form" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
+        <h2 id="linkModalTitle" data-i18n="linkModal.title">Link einfügen</h2>
+        <p class="muted" data-i18n="linkModal.subtitle">Füge eine Adresse ein. Bei Bedarf wird automatisch `https://` ergänzt.</p>
+        <label class="modal-field" for="linkUrlInput" data-i18n="linkModal.label">Adresse</label>
+        <input id="linkUrlInput" class="modal-input" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://example.com" data-i18n-placeholder="linkModal.placeholder" />
+        <div class="modal-actions">
+          <button id="saveLinkModal" class="btn primary" type="button" data-i18n="linkModal.confirm">Link übernehmen</button>
+          <button id="cancelLinkModal" class="btn" type="button" data-i18n="linkModal.cancel">Abbrechen</button>
+        </div>
+      </section>
+    </div>
+
+    <footer class="muted center">
+      <small><span data-i18n="footer.countdown">Automatische Löschung in</span> <span id="countdown">—:—:—</span></small>
+    </footer>
+
+    <div class="opensource-box">
+      <a href="https://github.com/malziland/malzispace" target="_blank" rel="noopener noreferrer" class="opensource-link">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span data-i18n="landing.opensource.button">Open Source auf GitHub</span>
+      </a>
+    </div>
+
+    <div class="support-box">
+      <p class="support-headline" data-i18n="support.headline">Keine Paywall. Kein Bullshit.</p>
+      <p class="support-text" data-i18n="support.text">Und du h&auml;ltst es am Laufen.</p>
+      <a href="https://buymeacoffee.com/malzispace" target="_blank" rel="noopener noreferrer" class="support-btn" data-i18n="support.button">Jetzt Projekt unterst&uuml;tzen</a>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; 2026 malziSPACE &bull; powered by malziland</span>
+        <span class="footer-sep">&middot;</span>
+        <a href="impressum.html" data-i18n="site.footer.imprint">Impressum</a>
+        <span class="footer-sep">&middot;</span>
+        <a href="privacy.html" data-i18n="site.footer.privacy">Datenschutz</a>
+        <span class="footer-sep">&middot;</span>
+        <a href="agb.html" data-i18n="site.footer.terms">Nutzungsbedingungen</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="assets/space-bootstrap.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/i18n.js"></script>
+  <script type="module" src="assets/appcheck.js"></script>
+  <script src="assets/vendor/qrcode.min.js" defer></script>
+  <script type="module" src="assets/modules/app.js"></script>
+  <script src="assets/countdown.js" defer></script>
+
+</body>
+</html>

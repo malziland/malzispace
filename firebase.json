@@ -1,0 +1,95 @@
+{
+  "functions": {
+    "source": "services/api"
+  },
+  "hosting": {
+    "public": "build/hosting",
+    "predeploy": [
+      "npm run build:hosting"
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+          },
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin"
+          },
+          {
+            "key": "Cross-Origin-Resource-Policy",
+            "value": "same-origin"
+          },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains; preload"
+          }
+        ]
+      },
+      {
+        "source": "assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "node/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "**/*.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=0, must-revalidate"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://www.gstatic.com https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.googleapis.com wss://malzispace-collab-457350771644.europe-west3.run.app; upgrade-insecure-requests"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "function": "api"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "infra/firebase/firestore.rules",
+    "indexes": "infra/firebase/firestore.indexes.json"
+  },
+  "database": {
+    "rules": "infra/firebase/database.rules.json"
+  }
+}

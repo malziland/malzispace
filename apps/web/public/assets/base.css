@@ -1,0 +1,195 @@
+/* assets/base.css — Shared styles for all pages (fonts, vars, reset, layout) */
+
+/* ── Self-hosted Fonts (1:1 malzi.me) ── */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fonts/inter/inter-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('./fonts/jetbrains-mono/jetbrains-mono-latin.woff2') format('woff2');
+}
+
+:root{
+  --bg: #0a0c10;
+  --surface: #111318;
+  --card: #161921;
+  --text: #c8cdd8;
+  --text-hi: #e8ecf4;
+  --muted: #9ca3af;
+  --accent: #38bdf8;
+  --accent-dim: rgba(56,189,248,.10);
+  --ok: #21c18a;
+  --warn: #ffba53;
+  --border: #1e222d;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --radius: 18px;
+}
+
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  padding:0;
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.55 "Inter",-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+html{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+body{
+  scroll-padding-top: 64px;
+}
+
+.muted{ color: var(--muted); }
+
+/* ── Topbar (1:1 malzi.me) ── */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:rgba(15,16,32,.65);
+  backdrop-filter:blur(10px) saturate(160%);
+  border-bottom:1px solid var(--border);
+}
+.topbar .inner{
+  max-width:1120px;
+  margin:0 auto;
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logoimg{
+  width:auto;
+  height:72px;
+  max-width:min(92vw, 600px);
+  display:block;
+}
+
+/* ── Open Source Box (1:1 malzi.me) ── */
+.opensource-box{
+  position:relative;
+  z-index:1;
+  max-width:680px;
+  margin:48px auto 24px;
+  padding:0 20px;
+  text-align:center;
+}
+.opensource-link{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 22px;
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.78rem;
+  font-weight:500;
+  letter-spacing:.04em;
+  color:var(--muted);
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;
+  background:rgba(255,255,255,.03);
+  transition:all .25s ease;
+}
+.opensource-link:hover{
+  color:var(--text-hi);
+  border-color:rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);
+  transform:translateY(-1px);
+}
+.opensource-link:active{ transform:translateY(0); }
+.opensource-link svg{
+  width:18px;
+  height:18px;
+  fill:currentColor;
+  flex-shrink:0;
+}
+
+/* ── Support Box (1:1 malzi.me) ── */
+.support-box{
+  position:relative;
+  z-index:1;
+  max-width:680px;
+  margin:0 auto;
+  padding:0 20px;
+  text-align:center;
+}
+.support-headline{
+  font-family:"JetBrains Mono",monospace;
+  font-size:.82rem;
+  font-weight:500;
+  letter-spacing:.06em;
+  color:var(--text-hi);
+  margin:0 0 4px;
+}
+.support-text{
+  font-size:.88rem;
+  color:var(--muted);
+  margin:0 0 14px;
+}
+.support-btn{
+  display:inline-block;
+  padding:10px 24px;
+  font-family:"JetBrains Mono",monospace;
+  font-size:.78rem;
+  font-weight:500;
+  letter-spacing:.04em;
+  color:var(--accent);
+  text-decoration:none;
+  border:1px solid rgba(56,189,248,.25);
+  border-radius:8px;
+  background:var(--accent-dim);
+  transition:all .25s ease;
+}
+.support-btn:hover{
+  border-color:var(--accent);
+  box-shadow:0 0 16px rgba(56,189,248,.15);
+  transform:translateY(-1px);
+}
+.support-btn:active{ transform:translateY(0); }
+
+/* ── Footer (1:1 malzi.me) ── */
+.site-footer{
+  text-align:center;
+  padding:24px 20px;
+  border-top:1px solid var(--border);
+  margin-top:20px;
+}
+.footer-inner{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+  font-size:.78rem;
+  color:var(--muted);
+}
+.footer-copy{ color:var(--muted); }
+.footer-sep{
+  color:var(--border);
+  user-select:none;
+}
+.site-footer a{
+  color:var(--muted);
+  text-decoration:none;
+  transition:color .2s;
+}
+.site-footer a:hover{ color:var(--accent); }
+
+/* ── Shared responsive ── */
+@media (max-width: 600px){
+  .topbar .inner{padding:10px 12px}
+  .logoimg{height:56px;max-width:90vw}
+}

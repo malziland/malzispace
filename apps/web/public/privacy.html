@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="privacy.pageTitle">Datenschutz &mdash; malziSPACE</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="shortcut icon" href="assets/logo.svg" />
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="assets/landing.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="inner">
+      <div class="brand">
+        <a href="index.html">
+          <img class="logoimg" src="assets/logo.svg" alt="malziSPACE Logo">
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="shell">
+    <div class="legal-page">
+      <div class="legal-header">
+        <a class="back-link" href="index.html" data-i18n="site.backHome">&larr; Zur&uuml;ck zur Startseite</a>
+      </div>
+
+      <h1 data-i18n="privacy.heading">Datenschutz</h1>
+      <p class="legal-subtitle" data-i18n="privacy.kicker">Verst&auml;ndlich erkl&auml;rt &middot; Stand: M&auml;rz 2026</p>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.responsible.title">Verantwortlicher</h2>
+        <p data-i18n-html="privacy.responsible.body"><strong>malziland &ndash; digitale Wissensgestaltung e.U.</strong>, Inhaber Christoph Krieger. Kontaktinformationen findest du im <a href="impressum.html">Impressum</a>.</p>
+        <p>Datenschutz-Kontakt: <a href="mailto:datenschutz@malzi.space">datenschutz@malzi.space</a></p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s1.title">1. Zero&dash;Knowledge ist der Kern</h2>
+        <p data-i18n-html="privacy.s1.body1">
+          Nur &bdquo;verschl&uuml;sselt&ldquo; reicht nicht &ndash; entscheidend ist <strong>wer den Schl&uuml;ssel hat</strong>.
+          Bei Zero&dash;Knowledge liegt der Schl&uuml;ssel <strong>nur bei dir</strong>. Das hei&szlig;t:
+          Wir bekommen ihn nie zu sehen und k&ouml;nnen deinen Inhalt technisch nicht lesen.
+        </p>
+        <p data-i18n-html="privacy.s1.body2">
+          Kurz gesagt: Der Text wird <strong>in deinem Browser</strong> verschl&uuml;sselt,
+          bevor er den Server erreicht. Auf dem Server landet nur verschl&uuml;sselter Datenm&uuml;ll.
+        </p>
+        <ul class="legal-list">
+          <li data-i18n-html="privacy.s1.item1"><strong>100% Ende&dash;zu&dash;Ende&dash;verschl&uuml;sselt</strong></li>
+          <li data-i18n-html="privacy.s1.item2"><strong>Technik:</strong> AES&dash;GCM (256&dash;Bit) im Browser</li>
+          <li data-i18n-html="privacy.s1.item3"><strong>Schl&uuml;ssel:</strong> bleibt nur bei dir</li>
+          <li data-i18n-html="privacy.s1.item4"><strong>Transport:</strong> HTTPS</li>
+          <li data-i18n-html="privacy.s1.item5"><strong>L&ouml;schung:</strong> automatisch nach 24&nbsp;Stunden</li>
+        </ul>
+        <p class="muted" data-i18n="privacy.s1.note">Wir sehen nur verschlossene Briefumschl&auml;ge &ndash; und haben keinen Schl&uuml;ssel f&uuml;rs &Ouml;ffnen.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s2.title">2. Welche Daten entstehen?</h2>
+        <ul class="legal-list">
+          <li data-i18n-html="privacy.s2.item1"><strong>Verschl&uuml;sselte Inhalte</strong> (f&uuml;r uns nur &bdquo;Buchstabensalat&ldquo;)</li>
+          <li data-i18n-html="privacy.s2.item2"><strong>Zeitpunkte</strong> (Erstellt/Ge&auml;ndert), damit Sync &amp; L&ouml;schung klappen</li>
+          <li data-i18n-html="privacy.s2.item3"><strong>Presence&dash;Token</strong>, damit &bdquo;Anzahl Personen&ldquo; funktioniert</li>
+          <li data-i18n-html="privacy.s2.item4"><strong>Technische Verbindungsdaten</strong> wie IP&dash;Adresse, Request&dash;Metadaten und Security-/Rate&dash;Limit-Signale</li>
+          <li data-i18n-html="privacy.s2.item5"><strong>App&dash;Check-/Proof&dash;of&dash;Work&dash;Signale</strong>, damit Bots und missbr&auml;uchliche Nutzung blockiert werden k&ouml;nnen</li>
+        </ul>
+        <p class="muted" data-i18n="privacy.s2.note">Kein Benutzerkonto, keine Analytics-Profile, keine Werbeprofile.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s3.title">3. Was bei uns nicht existiert</h2>
+        <div class="legal-block legal-block--highlight">
+          <ul class="legal-list legal-list--flush">
+            <li data-i18n-html="privacy.s3not.item1"><strong>Kein Klartext</strong> auf dem Server &ndash; nur verschl&uuml;sselte Daten, die ohne deinen Schl&uuml;ssel unlesbar sind</li>
+            <li data-i18n-html="privacy.s3not.item2"><strong>Kein Account</strong> &ndash; kein Login, kein Passwort, keine E-Mail-Adresse. Wir kennen dich nicht</li>
+            <li data-i18n-html="privacy.s3not.item3"><strong>Kein Tracking</strong> &ndash; kein Cookie, kein Google Analytics, kein Pixel. Nur technisch notwendiger localStorage</li>
+            <li data-i18n-html="privacy.s3not.item4"><strong>Keine IP-Adresse dauerhaft</strong> &ndash; technische Verbindungsdaten werden nur tempor&auml;r f&uuml;r Missbrauchsschutz verarbeitet</li>
+            <li data-i18n-html="privacy.s3not.item5"><strong>Keine Werbung</strong> &ndash; keine Anzeigen, kein Datenverkauf, keine Remarketing-Tags</li>
+            <li data-i18n-html="privacy.s3not.item6"><strong>Keine Gesichtserkennung</strong> &ndash; keine Bildanalyse, keine KI auf deinen Inhalten</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s4.title">4. Wer ist beteiligt?</h2>
+        <div class="legal-table-wrap">
+          <table class="legal-table">
+            <thead>
+              <tr>
+                <th data-i18n="privacy.s4.header.service">Dienst</th>
+                <th data-i18n="privacy.s4.header.receives">Was er bekommt</th>
+                <th data-i18n="privacy.s4.header.operator">Betreiber</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Dienst" data-i18n-data-label="privacy.s4.header.service">Firebase Hosting</td>
+                <td data-label="Was er bekommt" data-i18n-data-label="privacy.s4.header.receives" data-i18n="privacy.s4.row1.receives">Statische Dateien ausliefern</td>
+                <td data-label="Betreiber" data-i18n-data-label="privacy.s4.header.operator">Google Ireland Ltd., EU</td>
+              </tr>
+              <tr>
+                <td data-label="Dienst" data-i18n-data-label="privacy.s4.header.service">Cloud Firestore</td>
+                <td data-label="Was er bekommt" data-i18n-data-label="privacy.s4.header.receives" data-i18n="privacy.s4.row2.receives">Verschl&uuml;sselte Space-Daten, Zeitstempel (<code>eur3</code>, Europa Multi-Region)</td>
+                <td data-label="Betreiber" data-i18n-data-label="privacy.s4.header.operator">Google Ireland Ltd., EU</td>
+              </tr>
+              <tr>
+                <td data-label="Dienst" data-i18n-data-label="privacy.s4.header.service">Realtime Database</td>
+                <td data-label="Was er bekommt" data-i18n-data-label="privacy.s4.header.receives" data-i18n="privacy.s4.row3.receives">Presence-Token f&uuml;r Live-Z&auml;hler (<code>europe-west1</code>, Belgien)</td>
+                <td data-label="Betreiber" data-i18n-data-label="privacy.s4.header.operator">Google Ireland Ltd., EU</td>
+              </tr>
+              <tr>
+                <td data-label="Dienst" data-i18n-data-label="privacy.s4.header.service">Cloud Functions &amp; Cloud Run</td>
+                <td data-label="Was er bekommt" data-i18n-data-label="privacy.s4.header.receives" data-i18n="privacy.s4.row4.receives">API-Anfragen, WebSocket-Relay (<code>europe-west3</code>, Frankfurt)</td>
+                <td data-label="Betreiber" data-i18n-data-label="privacy.s4.header.operator">Google Ireland Ltd., EU</td>
+              </tr>
+              <tr>
+                <td data-label="Dienst" data-i18n-data-label="privacy.s4.header.service">Firebase App Check</td>
+                <td data-label="Was er bekommt" data-i18n-data-label="privacy.s4.header.receives" data-i18n="privacy.s4.row5.receives">Proof-of-Work-Antwort zum Bot-Schutz (kein reCAPTCHA, kein Tracking-Skript)</td>
+                <td data-label="Betreiber" data-i18n-data-label="privacy.s4.header.operator">Google Ireland Ltd., EU</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" data-i18n-html="privacy.s4.note">
+          Wichtig: F&uuml;r die Web-Attestation laden wir aktuell keine reCAPTCHA- oder sonstigen Werbe-/Tracking-Skripte.
+          Der Browser l&ouml;st lokal eine kleine Proof-of-Work-Challenge; der Server mintet daraus einen Firebase-App-Check-Token.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s5.title">5. Cookies &amp; lokaler Speicher</h2>
+        <p data-i18n-html="privacy.s5.body">malziSPACE setzt <strong>keine Tracking-Cookies</strong>. Nur technisch notwendiger Speicher wird verwendet.</p>
+        <div class="legal-table-wrap">
+          <table class="legal-table">
+            <thead>
+              <tr>
+                <th data-i18n="privacy.s5.header.type">Typ</th>
+                <th data-i18n="privacy.s5.header.purpose">Zweck</th>
+                <th data-i18n="privacy.s5.header.duration">Dauer</th>
+                <th data-i18n="privacy.s5.header.size">Gr&ouml;&szlig;e</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Typ" data-i18n-data-label="privacy.s5.header.type">localStorage</td>
+                <td data-label="Zweck" data-i18n-data-label="privacy.s5.header.purpose" data-i18n="privacy.s5.localStorage.purpose">Anonymer Presence-Token (damit die Personenzahl stimmt)</td>
+                <td data-label="Dauer" data-i18n-data-label="privacy.s5.header.duration" data-i18n="privacy.s5.localStorage.duration">bis gel&ouml;scht</td>
+                <td data-label="Gr&ouml;&szlig;e" data-i18n-data-label="privacy.s5.header.size">&lt; 1&nbsp;KB</td>
+              </tr>
+              <tr>
+                <td data-label="Typ" data-i18n-data-label="privacy.s5.header.type">sessionStorage</td>
+                <td data-label="Zweck" data-i18n-data-label="privacy.s5.header.purpose" data-i18n="privacy.s5.sessionStorage.purpose">Countdown bis zur L&ouml;schung (Ablaufzeit des Spaces)</td>
+                <td data-label="Dauer" data-i18n-data-label="privacy.s5.header.duration" data-i18n="privacy.s5.sessionStorage.duration">bis Tab geschlossen</td>
+                <td data-label="Gr&ouml;&szlig;e" data-i18n-data-label="privacy.s5.header.size">&lt; 1&nbsp;KB</td>
+              </tr>
+              <tr>
+                <td data-label="Typ" data-i18n-data-label="privacy.s5.header.type">IndexedDB</td>
+                <td data-label="Zweck" data-i18n-data-label="privacy.s5.header.purpose" data-i18n="privacy.s5.indexedDb.purpose">nicht verwendet</td>
+                <td data-label="Dauer" data-i18n-data-label="privacy.s5.header.duration">&mdash;</td>
+                <td data-label="Gr&ouml;&szlig;e" data-i18n-data-label="privacy.s5.header.size">&mdash;</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" data-i18n-html="privacy.s5.note">Hei&szlig;t auf gut Deutsch: Wir merken uns kurz, dass <em>dieser</em> Browser da ist &ndash; aber nicht <em>wer</em> du bist.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s6.title">6. Das Rechtliche</h2>
+        <p data-i18n-html="privacy.s6.body1">
+          Deine Nutzung von malziSPACE basiert auf <strong>berechtigtem Interesse</strong> (Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO) &ndash; Bereitstellung des Dienstes und Missbrauchsschutz (Rate Limiting, App Check).
+        </p>
+        <p data-i18n-html="privacy.s6.body2">
+          Google verarbeitet die Daten in unserem Auftrag als <strong>Auftragsverarbeiter</strong> (Art.&nbsp;28 DSGVO) auf EU-Servern. Google darf die Daten nicht f&uuml;r eigene Zwecke nutzen. Grundlage: Google Cloud Data Processing Addendum, Vertragspartner ist Google Ireland Limited.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s7.title">7. Externe Links</h2>
+        <p data-i18n="privacy.s7.body">Auf einigen Seiten gibt es externe Links, zum Beispiel zu Buy Me a Coffee. Erst wenn du so einen Link anklickst, gelten zus&auml;tzlich die Datenschutzregeln des jeweiligen Zielanbieters.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="privacy.s8.title">8. Deine Rechte</h2>
+        <ul class="legal-list">
+          <li data-i18n-html="privacy.s8.item1"><strong>Auskunft</strong> (Art.&nbsp;15): Was wir &uuml;ber dich gespeichert haben &ndash; nichts Personenbezogenes</li>
+          <li data-i18n-html="privacy.s8.item2"><strong>L&ouml;schung</strong> (Art.&nbsp;17): Spaces werden automatisch nach 24&nbsp;Stunden gel&ouml;scht</li>
+          <li data-i18n-html="privacy.s8.item3"><strong>Widerruf</strong> (Art.&nbsp;7 Abs.&nbsp;3): Schlie&szlig;e die Seite, fertig</li>
+          <li data-i18n-html="privacy.s8.item4"><strong>Beschwerde</strong> (Art.&nbsp;77): &Ouml;sterreichische Datenschutzbeh&ouml;rde, Barichgasse 40&ndash;42, 1030 Wien (<a href="https://dsb.gv.at" target="_blank" rel="noopener">dsb.gv.at</a>)</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="opensource-box">
+      <a href="https://github.com/malziland/malzispace" target="_blank" rel="noopener noreferrer" class="opensource-link">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span data-i18n="landing.opensource.button">Open Source auf GitHub</span>
+      </a>
+    </div>
+
+    <div class="support-box">
+      <p class="support-headline" data-i18n="support.headline">Keine Paywall. Kein Bullshit.</p>
+      <p class="support-text" data-i18n="support.text">Und du h&auml;ltst es am Laufen.</p>
+      <a href="https://buymeacoffee.com/malzispace" target="_blank" rel="noopener noreferrer" class="support-btn" data-i18n="support.button">Jetzt Projekt unterst&uuml;tzen</a>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; 2026 malziSPACE &bull; powered by malziland</span>
+        <span class="footer-sep">&middot;</span>
+        <a href="impressum.html" data-i18n="site.footer.imprint">Impressum</a>
+        <span class="footer-sep">&middot;</span>
+        <a href="privacy.html" data-i18n="site.footer.privacy">Datenschutz</a>
+        <span class="footer-sep">&middot;</span>
+        <a href="agb.html" data-i18n="site.footer.terms">Nutzungsbedingungen</a>
+      </div>
+    </footer>
+  </div>
+  <script src="assets/site-i18n-dicts.js"></script>
+  <script src="assets/i18n.js"></script>
+</body>
+</html>
