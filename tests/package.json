@@ -7,6 +7,6 @@
     "test": "node --test unit/**/*.test.mjs"
   },
   "dependencies": {
-    "yjs": "^13.6.18"
+    "yjs": "^13.6.30"
   }
 }
