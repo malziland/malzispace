@@ -4,8 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title data-i18n="landing.pageTitle">malziSPACE – paste. share. done.</title>
+  <meta name="description" content="Minimalistischer Paste-Service mit Echtzeit-Zusammenarbeit, Ende-zu-Ende-Verschlüsselung und automatischer Löschung nach 24 Stunden. Kein Login, kein Tracking." />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="shortcut icon" href="assets/logo.svg" />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://firebaseappcheck.googleapis.com" crossorigin />
   <link rel="stylesheet" href="assets/base.css" />
   <link rel="stylesheet" href="assets/landing.css" />
 </head>
@@ -15,13 +18,13 @@
     <div class="inner">
       <div class="brand">
         <a href="https://malzi.space">
-          <img class="logoimg" src="assets/logo.svg" alt="malziSPACE Logo">
+          <img class="logoimg" src="assets/logo.svg" alt="malziSPACE Logo" width="360" height="72">
         </a>
       </div>
     </div>
   </div>
 
-  <div class="shell">
+  <main class="shell">
     <header class="hero">
       <h1 class="hero-headline" data-i18n="landing.hero.title">paste. share. done.</h1>
       <p class="hero-sub" data-i18n="landing.hero.subtitle">Teile Text in Sekunden &ndash; verschl&uuml;sselt, ohne Login, automatisch gel&ouml;scht.</p>
@@ -31,7 +34,8 @@
         <button type="submit" class="btn primary" data-i18n="landing.form.submit">Neuen Space erstellen</button>
       </form>
     </header>
-    <section class="info">
+    <section class="info" aria-labelledby="info-heading">
+      <h2 id="info-heading" class="sr-only" data-i18n="landing.info.heading">Warum malziSPACE?</h2>
       <div class="info-grid">
         <div class="info-item">
           <div class="info-icon" aria-hidden="true">
@@ -98,7 +102,7 @@
         <a href="agb.html" data-i18n="site.footer.terms">Nutzungsbedingungen</a>
       </div>
     </footer>
-  </div>
+  </main>
 
   <div id="createSplash" class="splash" aria-live="polite" aria-busy="true">
     <div class="spinner" aria-hidden="true"></div>
