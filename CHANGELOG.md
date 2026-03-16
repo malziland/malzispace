@@ -4,6 +4,8 @@ Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-16
+
 ### Added
 - Meta-Description fuer SEO (`<meta name="description">`)
 - `<main>` Landmark und `<h2>` Heading-Hierarchie fuer Accessibility
