@@ -159,6 +159,15 @@ ctx.copyAllBtn?.addEventListener('click', async () => {
   prompt(t('copy.textPrompt'), text);
 });
 
+// ── Browser compatibility ────────────────────────────────────────
+
+if (typeof crypto === 'undefined' || !crypto.subtle) {
+  editor.setAttribute('contenteditable', 'false');
+  editor.innerHTML = '<p>' + t('error.cryptoUnavailable') + '</p>';
+  if (ctx.status) ctx.status.classList.add('status-dot--err');
+  throw new Error('crypto.subtle not available');
+}
+
 // ── Start ───────────────────────────────────────────────────────
 
 init();

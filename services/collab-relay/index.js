@@ -37,7 +37,7 @@ const ALLOW_HOST_FALLBACK = String(process.env.MZ_WS_ALLOW_HOST_FALLBACK || '0')
 const TRUST_PROXY_HOPS = Number.isFinite(Number(process.env.MZ_WS_TRUST_PROXY_HOPS))
   ? Math.max(0, Math.floor(Number(process.env.MZ_WS_TRUST_PROXY_HOPS)))
   : 1;
-const WS_AUTH_CACHE_TTL_MS = envInt('MZ_WS_AUTH_CACHE_TTL_MS', 30_000);
+const WS_AUTH_CACHE_TTL_MS = envInt('MZ_WS_AUTH_CACHE_TTL_MS', 5_000);
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.MZ_ALLOWED_ORIGINS);
 
 const wss = new WebSocket.Server({ server, maxPayload: MAX_PAYLOAD_BYTES });

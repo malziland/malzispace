@@ -82,7 +82,8 @@
       'dialog.enterLink': 'Link eingeben (https://...)',
       'dialog.missingKeyAlert': 'Dieser Space ist Ende-zu-Ende-verschlüsselt. Der Link muss den geheimen Teil nach dem # enthalten.',
       'qr.loadFailed': 'QR-Code konnte nicht geladen werden.',
-      'space.simulator.title': 'Simulator'
+      'space.simulator.title': 'Simulator',
+      'error.cryptoUnavailable': 'Dein Browser unterstützt die Web Crypto API nicht. Bitte verwende einen aktuellen Browser (Chrome, Firefox, Safari oder Edge).'
     },
     en: {
       'site.backHome': '← Back to homepage',
@@ -163,7 +164,8 @@
       'dialog.enterLink': 'Enter link (https://...)',
       'dialog.missingKeyAlert': 'This space is end-to-end encrypted. The link must include the secret part after the #.',
       'qr.loadFailed': 'QR code could not be loaded.',
-      'space.simulator.title': 'Simulator'
+      'space.simulator.title': 'Simulator',
+      'error.cryptoUnavailable': 'Your browser does not support the Web Crypto API. Please use a modern browser (Chrome, Firefox, Safari, or Edge).'
     }
   };
 

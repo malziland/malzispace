@@ -66,6 +66,9 @@
       for (let i = 0; i < proofU8.length; i++) proofBin += String.fromCharCode(proofU8[i]);
       const keyProof = btoa(proofBin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
+      // Wait for App Check initialization before requesting headers
+      try { if (window.__MZ_APP_CHECK_READY__) await window.__MZ_APP_CHECK_READY__; } catch (e) {}
+
       const headers = { 'Content-Type': 'application/json' };
       try {
         if (typeof window.__MZ_getAppCheckHeaders__ === 'function') {

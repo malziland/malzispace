@@ -89,7 +89,10 @@ export function ensureDynamicColorClass(kind, value) {
   if (!normalized) return '';
   const className = `mz-${kind}-${hash32(`${kind}:${normalized}`).toString(36)}`;
   if (dynamicColorRuleCache.has(className)) return className;
-  if (dynamicColorRuleCache.size >= DYNAMIC_COLOR_CACHE_LIMIT) return '';
+  if (dynamicColorRuleCache.size >= DYNAMIC_COLOR_CACHE_LIMIT) {
+    const oldest = dynamicColorRuleCache.keys().next().value;
+    dynamicColorRuleCache.delete(oldest);
+  }
   const sheet = getDynamicStyleSheet();
   if (sheet) {
     try {

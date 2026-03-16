@@ -274,11 +274,10 @@ export function restoreSelectionFromMarkers() {
     sel.removeAllRanges();
     sel.addRange(range);
   } catch (e) {
-    removeSelectionMarkers(ctx.editor);
     return false;
+  } finally {
+    removeSelectionMarkers(ctx.editor);
   }
-
-  removeSelectionMarkers(ctx.editor);
   return true;
 }
 

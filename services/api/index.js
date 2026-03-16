@@ -41,6 +41,8 @@ const RL_TITLE_IP = new RateLimiter({ windowMs: 60_000, max: 180 });   // 3 req/
 const RL_TITLE = new RateLimiter({ windowMs: 60_000, max: 600 });      // 10 req/s per IP+space
 const RL_PRESENCE_IP = new RateLimiter({ windowMs: 60_000, max: 240 }); // 4 req/s per IP across spaces
 const RL_PRESENCE = new RateLimiter({ windowMs: 60_000, max: 600 });   // 10 req/s per IP+space
+const RL_DELETE_IP = new RateLimiter({ windowMs: 60_000, max: 30 });   // 0.5 req/s per IP across spaces
+const RL_DELETE = new RateLimiter({ windowMs: 60_000, max: 60 });      // 1 req/s per IP+space
 const RL_YJS_PUSH_IP = new RateLimiter({ windowMs: 60_000, max: 480 }); // 8 req/s per IP across spaces
 const RL_YJS_PUSH = new RateLimiter({ windowMs: 60_000, max: 1800 });  // 30 req/s per IP+space
 const RL_YJS_PUSH_BYTES = new RateLimiter({ windowMs: 60_000, max: 4096 }); // 4 MiB/min per IP
@@ -154,8 +156,9 @@ function rateLimit(res, limiter, key, cost = 1) {
     sendJson(res, 429, { error: 'rate_limited', retry_after: retryAfterSec });
     return false;
   } catch (e) {
-    // If limiter fails, do not take down the API.
-    return true;
+    console.error('rate limiter error', e?.message || e);
+    sendJson(res, 503, { error: 'service_unavailable' });
+    return false;
   }
 }
 
@@ -271,10 +274,13 @@ async function verifyAppCheck(req, res, next) {
   const token = req.header('X-Firebase-AppCheck');
   if (!token) return sendJson(res, 401, { error: 'app_check_required' });
   try {
-    await admin.appCheck().verifyToken(token);
+    const result = await admin.appCheck().verifyToken(token);
+    if (result.appId && !isAllowedAppCheckAppId(result.appId)) {
+      return sendJson(res, 401, { error: 'app_check_invalid' });
+    }
     return next();
   } catch (err) {
-    console.error('app check failed', err);
+    console.error('app check failed', err?.code || err?.message);
     return sendJson(res, 401, { error: 'app_check_invalid' });
   }
 }
@@ -306,7 +312,7 @@ router.get('/appcheck/challenge', async (req, res) => {
       expires_at_ms: expiresAtMs
     });
   } catch (err) {
-    console.error('appcheck challenge error', err);
+    console.error('appcheck challenge error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -351,7 +357,7 @@ router.post('/appcheck/token', async (req, res) => {
       expireTimeMillis: Date.now() + issued.ttlMillis
     });
   } catch (err) {
-    console.error('appcheck token error', err);
+    console.error('appcheck token error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -409,7 +415,7 @@ router.post('/create', async (req, res) => {
     }
     return sendJson(res, 500, { error: 'collision' });
   } catch (err) {
-    console.error('create error', err);
+    console.error('create error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -459,7 +465,7 @@ router.get('/load', async (req, res) => {
 
     return sendJson(res, 200, out);
   } catch (err) {
-    console.error('load error', err);
+    console.error('load error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -557,7 +563,7 @@ router.post('/save', async (req, res) => {
     if (result && result.error === 'forbidden_no_key') return sendJson(res, 403, { error: 'forbidden_no_key' });
     return sendJson(res, 200, result);
   } catch (err) {
-    console.error('save error', err);
+    console.error('save error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -607,7 +613,7 @@ router.post('/title', async (req, res) => {
     if (err && err.code === 'not_found') return sendJson(res, 404, { error: 'not_found' });
     if (err && err.code === 'expired') return sendJson(res, 410, { error: 'expired' });
     if (err && err.code === 'forbidden_no_key') return sendJson(res, 403, { error: 'forbidden_no_key' });
-    console.error('title error', err);
+    console.error('title error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -675,7 +681,7 @@ router.post('/yjs/push', async (req, res) => {
     }
     return sendJson(res, 200, { ok: true, ts });
   } catch (err) {
-    console.error('yjs push error', err);
+    console.error('yjs push error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -736,7 +742,7 @@ router.get('/yjs/pull', async (req, res) => {
     }
     return sendJson(res, 200, { full, fulls, updates });
   } catch (err) {
-    console.error('yjs pull error', err);
+    console.error('yjs pull error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -784,7 +790,34 @@ router.post('/presence', async (req, res) => {
 
     return sendJson(res, 200, { ok: true, count });
   } catch (err) {
-    console.error('presence error', err);
+    console.error('presence error', err?.code || err?.message);
+    return sendJson(res, 500, { error: 'server_error' });
+  }
+});
+
+router.post('/delete', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const id = String(body.id || '').trim();
+    if (!ID_RE.test(id)) return sendJson(res, 400, { error: 'invalid_id' });
+    const ip = getClientIp(req);
+    if (!rateLimitMany(res, [
+      { limiter: RL_DELETE_IP, key: `delete_ip:${ip}` },
+      { limiter: RL_DELETE, key: `delete:${ip}:${id}` }
+    ])) return;
+    const keyProof = String(body.key_proof || '').trim();
+
+    const snap = await loadSpaceDoc(id);
+    if (!snap) return sendJson(res, 404, { error: 'not_found' });
+    const data = snap.data() || {};
+    if (isExpiredData(data, Date.now())) return sendJson(res, 410, { error: 'expired' });
+    if (!isWriteAuthorized(data, keyProof)) return sendJson(res, 403, { error: 'forbidden_no_key' });
+
+    await db.collection('spaces').doc(id).delete();
+    await deleteRtdbPaths([id]);
+    return sendJson(res, 200, { ok: true });
+  } catch (err) {
+    console.error('delete error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -808,7 +841,7 @@ app.use((err, req, res, next) => {
       return sendJson(res, 400, { error: 'invalid_json' });
     }
   } catch (e) {}
-  console.error('unhandled error', err);
+  console.error('unhandled error', err?.code || err?.message);
   return sendJson(res, 500, { error: 'server_error' });
 });
 
