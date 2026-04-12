@@ -10,7 +10,7 @@
     "node": "24"
   },
   "dependencies": {
-    "firebase-admin": "^13.7.0",
+    "firebase-admin": "^13.8.0",
     "ws": "^8.20.0"
   }
 }
