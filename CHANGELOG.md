@@ -2,6 +2,78 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.2.0] - 2026-05-17
+
+Owner-Link und Read-Only-Sperre fuer Spaces. Der Ersteller kann beim
+Anlegen eine Sperre aktivieren und bekommt zusaetzlich einen Owner-Link
+ins URL-Fragment. Nur mit Owner-Link laesst sich die Sperre ein- und
+ausschalten und im gesperrten Zustand schreiben. Zero-Knowledge bleibt
+vollstaendig erhalten: Server sieht weiter nur Hashes und Signaturen,
+keinen Klartext.
+
+### Added
+- OWNER-01: Neues optionales `owner_key_proof`-Feld auf `spaces`. Wird
+  beim `/api/create` mitgegeben, setzt das den Space auf
+  `read_only: true` und legt das zweite Geheimnis (SHA-256 vom 32-Byte
+  Owner-Secret) ab. Spaces ohne Feld verhalten sich exakt wie bisher.
+- OWNER-02: Neuer Endpunkt `POST /api/lock` zum Umschalten von
+  `read_only`. Nur per `owner_key_proof` autorisiert; mismatch → 403
+  `read_only_not_owner`, kein Owner hinterlegt → 404 `no_owner`.
+- OWNER-03: `/api/save`, `/api/title` und `/api/yjs/push` setzen eine
+  zentrale `checkWriteAuth`-Regel um — bei gesperrtem Owner-Space
+  reicht `key_proof` nicht mehr, der Aufruf muss `owner_key_proof`
+  mitsenden. Bei normalen Spaces ist der Pfad unveraendert.
+- OWNER-04: `/api/load` liefert zusaetzlich `read_only` und
+  `has_owner`, damit der Client den UI-Zustand direkt nach dem ersten
+  Load korrekt setzt.
+- OWNER-05: Collab-Relay unterscheidet Owner- und Reader-Connections.
+  Owner-Clients senden `is_owner=1` plus `owner_sig` (HMAC ueber
+  `room.exp.nonce` mit `owner_key_proof`); Reader benutzen weiter die
+  bestehenden Signaturen. Bei gesperrtem Space werden Yjs-Updates von
+  Nicht-Ownern verworfen, statt sie zu broadcasten.
+- OWNER-06: Per-Raum-Firestore-Listener im Relay halt den Lock-Status
+  live nach. Wechselt `read_only`, broadcastet das Relay einen
+  Control-Frame `{type:"lock_state", read_only:bool}` an alle
+  verbundenen Clients. Neue Connections bekommen sofort den
+  aktuellen Status.
+- OWNER-07: Frontend: Checkbox „Beim Erstellen sperren" auf der
+  Landingpage, neue Owner-URL-Form `#<key>.<ownerSecret>` (Dot
+  trennt zwei base64url-Segmente), Schloss-Icon in der Space-Toolbar
+  zum Sperren/Entsperren fuer Owner, sichtbarer Read-Only-Status fuer
+  Reader. `setEditorEditable(false)` und disabled Toolbar bei
+  Reader-auf-gesperrt; Live-Update via `lock_state`-Frame ohne
+  Reload.
+- OWNER-08: Share-Button (QR + Link kopieren) entfernt das
+  Owner-Secret aus der URL, bevor sie an den QR-Renderer oder die
+  Clipboard geht. Damit kann der Owner nicht versehentlich seinen
+  eigenen Schreibzugang teilen, wenn er „Teilen" klickt.
+- OWNER-09: Lokaler Test-Stack (`firebase.json` emulators + neuer
+  `tests/support/dev_stack.mjs`) startet Firestore-, Database-,
+  Functions- und Hosting-Emulator plus den Relay-Service in einem
+  Rutsch. Der API-Service bekommt einen `MZ_DISABLE_APPCHECK=1`-
+  Bypass, der nur dann greift, wenn die Env-Var explizit gesetzt
+  ist — in Produktion ohne Wirkung. Neuer E2E-Test
+  `tests/e2e/run_space_lock_e2e.mjs` (`npm run test:e2e:lock`)
+  deckt das Owner-/Reader-Verhalten und den Live-Toggle ueber den
+  echten Stack ab.
+- OWNER-10: API-Service migriert von der `admin.firestore.Timestamp`-
+  Namespace-Form auf modulare Imports
+  (`firebase-admin/firestore`, `firebase-admin/database`), weil die
+  Namespace-Form unter dem Functions-Emulator nicht zuverlaessig
+  aufgeloest wurde. Verhalten unveraendert.
+- OWNER-11: Owner-Welcome-Banner: nach einem `lock-on-create`-Flow
+  zeigt der Space dem frischen Owner einmal einen Hinweis mit dem
+  bereinigten Teilen-Link und einem Copy-Button. Markierung via
+  `sessionStorage.mz_fresh_owner_<id>`, automatisch konsumiert beim
+  ersten Anzeigen.
+- OWNER-12: `ops/verify_local.sh` zieht den neuen Lock-E2E (Schritt
+  10/10) ein, stoppt vorher den statischen Server, damit der
+  Firebase-Emulator den Port uebernehmen kann.
+
+### Out-of-Scope (bewusst)
+- Kein Owner-Recovery; verlorener Owner-Link → Space bleibt im
+  aktuellen Sperrzustand bis Ablauf.
+
 ## [1.1.1] - 2026-05-17
 
 Externe Audit-Befunde umgesetzt: Release-Gate-Reparatur, Privacy-Versprechen

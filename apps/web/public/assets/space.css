@@ -52,6 +52,52 @@ footer.center{ text-align:center; margin-top:18px; }
   gap: 8px;
   flex-wrap: wrap;
 }
+.btn.icon-only{
+  padding: 6px 10px;
+  min-width: auto;
+}
+.lock-toggle .lock-icon{
+  display: inline-block;
+  font-size: 1.05em;
+  line-height: 1;
+}
+.lock-toggle[data-state="locked"]{
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.lock-toggle[data-state="readonly"]{
+  opacity: .7;
+  cursor: default;
+}
+body.is-readonly #editor{
+  background: rgba(0,0,0,.02);
+}
+body.is-readonly #editorToolbar [data-cmd],
+body.is-readonly #editorToolbar [data-action]{
+  opacity: .4;
+  pointer-events: none;
+}
+.owner-welcome{
+  margin: 0 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: var(--accent-dim, rgba(56,189,248,.08));
+}
+.owner-welcome-inner{ display: grid; gap: 10px; }
+.owner-welcome p{ margin: 0; font-size: .9rem; line-height: 1.4; opacity: .9; }
+.owner-welcome-share{ display: grid; gap: 4px; font-size: .8rem; }
+.owner-welcome-share input{
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255,255,255,.18));
+  background: rgba(0,0,0,.25);
+  color: inherit;
+}
+.owner-welcome-actions{ display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.ghost{ background: transparent; }
 .title-label{
   font-size: 13px;
   color: var(--muted);

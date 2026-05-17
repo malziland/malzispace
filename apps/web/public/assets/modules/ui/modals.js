@@ -32,10 +32,23 @@ export function closeQrModal() {
   try { document.body.classList.remove('has-modal-open'); } catch (e) {}
 }
 
+/**
+ * Compute the URL to share. For owner-mode (hash contains `<key>.<ownerSecret>`)
+ * the owner secret is stripped — the owner must never accidentally share their
+ * own credential when they meant to share read access.
+ */
+function shareableUrl() {
+  const href = location.href;
+  const hash = location.hash || '';
+  if (!hash || hash.indexOf('.') < 0) return href;
+  const keyOnly = hash.replace(/^#/, '').split('.')[0];
+  return href.slice(0, href.length - hash.length) + '#' + keyOnly;
+}
+
 /** Render the QR code inside the modal. */
 function renderQrCode() {
   if (!ctx.qrCodeEl) return;
-  const url = location.href;
+  const url = shareableUrl();
   if (ctx.qrLinkText) ctx.qrLinkText.textContent = url;
   ctx.qrCodeEl.innerHTML = '';
   if (window.QRCode) {
@@ -189,7 +202,7 @@ export function initModals() {
   });
   ctx.copyQrLinkBtn?.addEventListener('click', async () => {
     const { copyText } = await import('../editor/clipboard.js');
-    const url = location.href;
+    const url = shareableUrl();
     if (await copyText(url)) {
       const { setButtonCopiedState } = await import('../editor/clipboard.js');
       setButtonCopiedState(ctx.copyQrLinkBtn, t('space.button.copyQrLink'));

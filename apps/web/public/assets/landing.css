@@ -156,6 +156,29 @@ a{color:#dbeafe;text-decoration:none}
 .hero-form .btn.primary{
   white-space:nowrap;
 }
+.hero-lock-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:.82rem;
+  opacity:.85;
+  cursor:pointer;
+  user-select:none;
+}
+.hero-lock-toggle input[type=checkbox]{
+  accent-color:#ffba53;
+  width:16px;
+  height:16px;
+  margin:0;
+}
+.hero-lock-hint{
+  flex-basis:100%;
+  margin:0;
+  font-size:.78rem;
+  opacity:.7;
+  text-align:center;
+  max-width:520px;
+}
 .splash{
   position:fixed;
   inset:0;

@@ -36,6 +36,37 @@ test('verifyWsAuthQuery: rejects wrong room or expired token', () => {
   );
 });
 
+test('verifyWsAuthQuery: respects sigParamName option for owner signatures', () => {
+  const room = 'abc12345';
+  const exp = String(1_710_000_060_000);
+  const nonce = 'nonce123456';
+  const ownerKeyProof = 'owner-owner-owner-owner-owner-owner-owner-owner';
+  const ownerSig = createWsAuthSignature(room, exp, nonce, ownerKeyProof);
+  // Reader sig over the same payload but with a different secret must not be
+  // mistakenly accepted as an owner sig.
+  const readerSig = createWsAuthSignature(room, exp, nonce, 'reader-reader-reader-reader-reader-reader-rdr');
+
+  const ownerParams = new URLSearchParams({ exp, nonce, owner_sig: ownerSig });
+  assert.equal(
+    verifyWsAuthQuery(ownerParams, room, ownerKeyProof, { nowMs: 1_710_000_000_000, sigParamName: 'owner_sig' }),
+    true
+  );
+
+  const mixed = new URLSearchParams({ exp, nonce, owner_sig: readerSig });
+  assert.equal(
+    verifyWsAuthQuery(mixed, room, ownerKeyProof, { nowMs: 1_710_000_000_000, sigParamName: 'owner_sig' }),
+    false
+  );
+
+  // Missing owner_sig param with the default `sig` populated must still fail
+  // when sigParamName is overridden.
+  const wrongName = new URLSearchParams({ exp, nonce, sig: ownerSig });
+  assert.equal(
+    verifyWsAuthQuery(wrongName, room, ownerKeyProof, { nowMs: 1_710_000_000_000, sigParamName: 'owner_sig' }),
+    false
+  );
+});
+
 test('verifyWsAuthQuery: rejects malformed or excessively future-dated auth params', () => {
   const room = 'abc12345';
   const exp = String(1_710_000_060_000);

@@ -46,6 +46,7 @@ const ipConnRate = new Map();
 const ipOpenCounts = new Map();
 const roomAuthCache = new Map();
 const roomTraffic = new Map();
+const roomState = new Map();
 
 function getClientIp(req) {
   return getTrustedClientIp(req, { trustProxyHops: TRUST_PROXY_HOPS });
@@ -84,9 +85,9 @@ function getCachedRoomAuth(room, nowMs) {
   return cached;
 }
 
-async function getRoomKeyProof(room, nowMs) {
+async function getRoomAuthEntry(room, nowMs) {
   const cached = getCachedRoomAuth(room, nowMs);
-  if (cached) return cached.keyProof;
+  if (cached) return cached;
 
   const snap = await db.collection('spaces').doc(room).get();
   if (!snap.exists) return null;
@@ -96,12 +97,73 @@ async function getRoomKeyProof(room, nowMs) {
     : 0;
   const keyProof = typeof data.key_proof === 'string' ? data.key_proof : '';
   if (!keyProof || (expiresAt && expiresAt <= nowMs)) return null;
+  const ownerKeyProof = typeof data.owner_key_proof === 'string' && data.owner_key_proof.length > 0
+    ? data.owner_key_proof
+    : null;
 
-  roomAuthCache.set(room, {
+  const entry = {
     keyProof,
+    ownerKeyProof,
     cacheUntil: nowMs + WS_AUTH_CACHE_TTL_MS
-  });
-  return keyProof;
+  };
+  roomAuthCache.set(room, entry);
+  return entry;
+}
+
+function broadcastLockState(room, readOnly) {
+  const set = rooms.get(room);
+  if (!set) return;
+  const msg = JSON.stringify({ type: 'lock_state', read_only: !!readOnly });
+  for (const client of set) {
+    if (client.readyState === WebSocket.OPEN) {
+      try { client.send(msg); } catch (e) {}
+    }
+  }
+}
+
+function attachRoomState(room) {
+  let state = roomState.get(room);
+  if (state) {
+    state.refCount += 1;
+    return state;
+  }
+  state = { readOnly: false, ownerKeyProof: null, listener: null, refCount: 1 };
+  roomState.set(room, state);
+  try {
+    state.listener = db.collection('spaces').doc(room).onSnapshot(
+      (snap) => {
+        if (!snap.exists) return;
+        const data = snap.data() || {};
+        const nextReadOnly = !!data.read_only;
+        const nextOwnerKeyProof = typeof data.owner_key_proof === 'string' && data.owner_key_proof.length > 0
+          ? data.owner_key_proof
+          : null;
+        const changed = state.readOnly !== nextReadOnly;
+        state.readOnly = nextReadOnly;
+        state.ownerKeyProof = nextOwnerKeyProof;
+        // Auth cache may hold stale owner_key_proof; invalidate so the next
+        // connection re-reads it. Existing connections already authenticated.
+        roomAuthCache.delete(room);
+        if (changed) broadcastLockState(room, nextReadOnly);
+      },
+      (err) => {
+        console.error('room state listener error', { room, code: err?.code, message: err?.message });
+      }
+    );
+  } catch (e) {
+    console.error('room state listener attach failed', { room, message: e?.message });
+  }
+  return state;
+}
+
+function detachRoomState(room) {
+  const state = roomState.get(room);
+  if (!state) return;
+  state.refCount -= 1;
+  if (state.refCount <= 0) {
+    try { if (typeof state.listener === 'function') state.listener(); } catch (e) {}
+    roomState.delete(room);
+  }
 }
 
 wss.on('connection', async (ws, req) => {
@@ -131,12 +193,28 @@ wss.on('connection', async (ws, req) => {
     return;
   }
 
+  const isOwnerClaim = url.searchParams.get('is_owner') === '1';
   try {
-    const keyProof = await getRoomKeyProof(room, Date.now());
-    if (!keyProof || !verifyWsAuthQuery(url.searchParams, room, keyProof)) {
+    const entry = await getRoomAuthEntry(room, Date.now());
+    if (!entry) {
       releaseConcurrent(ipOpenCounts, ip);
       try { ws.close(1008, 'auth_invalid'); } catch (e) {}
       return;
+    }
+    if (isOwnerClaim) {
+      if (!entry.ownerKeyProof || !verifyWsAuthQuery(url.searchParams, room, entry.ownerKeyProof, { sigParamName: 'owner_sig' })) {
+        releaseConcurrent(ipOpenCounts, ip);
+        try { ws.close(1008, 'auth_invalid'); } catch (e) {}
+        return;
+      }
+      ws.isOwner = true;
+    } else {
+      if (!verifyWsAuthQuery(url.searchParams, room, entry.keyProof)) {
+        releaseConcurrent(ipOpenCounts, ip);
+        try { ws.close(1008, 'auth_invalid'); } catch (e) {}
+        return;
+      }
+      ws.isOwner = false;
     }
   } catch (e) {
     console.error('ws auth validation failed', e);
@@ -163,6 +241,13 @@ wss.on('connection', async (ws, req) => {
   ws.msgWindowStartedAt = Date.now();
   ws.msgWindowCount = 0;
   ws.byteBudget = { windowStartedAt: 0, used: 0 };
+
+  const lockState = attachRoomState(room);
+  // Send current lock state to the new client so its UI is consistent without
+  // waiting for the next toggle.
+  try {
+    ws.send(JSON.stringify({ type: 'lock_state', read_only: !!lockState.readOnly }));
+  } catch (e) {}
 
   ws.on('pong', () => {
     ws.isAlive = true;
@@ -196,6 +281,11 @@ wss.on('connection', async (ws, req) => {
       }
     } catch (e) {}
 
+    // When the space is locked, non-owner Yjs updates are dropped silently.
+    // The frontend disables the editor for readers, so this is defence in
+    // depth — a misbehaving client cannot leak writes into the relay.
+    if (lockState.readOnly && !ws.isOwner) return;
+
     for (const client of set) {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
         client.send(data);
@@ -210,6 +300,7 @@ wss.on('connection', async (ws, req) => {
   ws.on('close', () => {
     set.delete(ws);
     releaseConcurrent(ipOpenCounts, ws.clientIp || ip);
+    detachRoomState(room);
     if (set.size === 0) {
       rooms.delete(room);
       roomTraffic.delete(room);

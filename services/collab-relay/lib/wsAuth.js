@@ -38,10 +38,13 @@ function verifyWsAuthQuery(searchParams, room, keyProof, options = {}) {
   const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
   const maxFutureMs = Number.isFinite(options.maxFutureMs) ? options.maxFutureMs : 5 * 60 * 1000;
   const maxSkewMs = Number.isFinite(options.maxSkewMs) ? options.maxSkewMs : 5 * 1000;
+  const sigParam = typeof options.sigParamName === 'string' && options.sigParamName
+    ? options.sigParamName
+    : 'sig';
 
   const expRaw = searchParams.get('exp') || '';
   const nonce = searchParams.get('nonce') || '';
-  const sig = searchParams.get('sig') || '';
+  const sig = searchParams.get(sigParam) || '';
   const exp = Number(expRaw);
 
   if (!Number.isFinite(exp) || exp <= 0) return false;

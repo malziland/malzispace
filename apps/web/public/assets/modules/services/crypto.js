@@ -11,6 +11,12 @@ let cachedKeyProof = '';
 /** @type {Promise<string>|null} In-flight key proof derivation promise. */
 let keyProofPromise = null;
 
+/** @type {string} Cached base64url-encoded SHA-256 owner key proof. */
+let cachedOwnerKeyProof = '';
+
+/** @type {Promise<string>|null} In-flight owner key proof derivation promise. */
+let ownerKeyProofPromise = null;
+
 /**
  * Decode a base64url-encoded string to a Uint8Array.
  * @param {string} b64url - The base64url string.
@@ -39,18 +45,54 @@ export function toB64(u8) {
 }
 
 /**
+ * Read the URL hash fragment and split it into the content-key segment and
+ * the optional owner-secret segment (separated by a dot). Both segments are
+ * base64url, which never contains a dot, so the split is unambiguous.
+ * @returns {{keyB64: string, ownerSecretB64: string}}
+ */
+function readHashSegments() {
+  const h = (window.location.hash || '').replace(/^#/, '');
+  if (!h) return { keyB64: '', ownerSecretB64: '' };
+  const dot = h.indexOf('.');
+  if (dot < 0) return { keyB64: h, ownerSecretB64: '' };
+  return { keyB64: h.slice(0, dot), ownerSecretB64: h.slice(dot + 1) };
+}
+
+/**
  * Extract the 32-byte AES key from the URL hash fragment.
  * @returns {Uint8Array|null} The 32-byte key, or null if absent/invalid.
  */
 export function getKeyBytesFromHash() {
-  const h = (window.location.hash || '').replace(/^#/, '');
-  if (!h) return null;
+  const { keyB64 } = readHashSegments();
+  if (!keyB64) return null;
   try {
-    const bytes = fromB64(h);
+    const bytes = fromB64(keyB64);
     if (bytes.length < 32) return null;
     if (bytes.length > 32) return bytes.slice(0, 32);
     return bytes;
   } catch (e) { return null; }
+}
+
+/**
+ * Extract the 32-byte owner secret from the URL hash fragment, if present.
+ * @returns {Uint8Array|null} The 32-byte secret, or null if absent/invalid.
+ */
+export function getOwnerSecretBytesFromHash() {
+  const { ownerSecretB64 } = readHashSegments();
+  if (!ownerSecretB64) return null;
+  try {
+    const bytes = fromB64(ownerSecretB64);
+    if (bytes.length < 32) return null;
+    if (bytes.length > 32) return bytes.slice(0, 32);
+    return bytes;
+  } catch (e) { return null; }
+}
+
+/**
+ * @returns {boolean} True if the URL hash contains an owner-secret segment.
+ */
+export function isOwnerFromHash() {
+  return !!getOwnerSecretBytesFromHash();
 }
 
 /**
@@ -86,6 +128,42 @@ export async function importKey() {
 }
 
 /**
+ * Derive the owner-key proof (SHA-256 of the raw owner-secret bytes),
+ * returned as a base64url string. Empty if no owner-secret in URL.
+ * @returns {Promise<string>}
+ */
+export async function getOwnerKeyProof() {
+  if (cachedOwnerKeyProof) return cachedOwnerKeyProof;
+  if (ownerKeyProofPromise) return ownerKeyProofPromise;
+  ownerKeyProofPromise = (async () => {
+    const secret = getOwnerSecretBytesFromHash();
+    if (!secret) return '';
+    const digest = await crypto.subtle.digest('SHA-256', secret);
+    cachedOwnerKeyProof = toB64(new Uint8Array(digest));
+    return cachedOwnerKeyProof;
+  })();
+  try {
+    return await ownerKeyProofPromise;
+  } finally {
+    ownerKeyProofPromise = null;
+  }
+}
+
+async function hmacSignRoomAccess(secretString, room, exp, nonce) {
+  if (!secretString) return '';
+  const hmacKey = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secretString),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const payload = new TextEncoder().encode(`${room}.${exp}.${nonce}`);
+  const sig = await crypto.subtle.sign('HMAC', hmacKey, payload);
+  return toB64(new Uint8Array(sig));
+}
+
+/**
  * Sign a room access payload using HMAC-SHA-256 with the key proof.
  * @param {string} room - The room/space identifier.
  * @param {number|string} exp - The expiration timestamp.
@@ -94,17 +172,16 @@ export async function importKey() {
  */
 export async function signRoomAccess(room, exp, nonce) {
   const keyProof = await getWriteKeyProof();
-  if (!keyProof) return '';
-  const hmacKey = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(keyProof),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const payload = new TextEncoder().encode(`${room}.${exp}.${nonce}`);
-  const sig = await crypto.subtle.sign('HMAC', hmacKey, payload);
-  return toB64(new Uint8Array(sig));
+  return hmacSignRoomAccess(keyProof, room, exp, nonce);
+}
+
+/**
+ * Sign a room access payload as the owner, using the owner key proof.
+ * @returns {Promise<string>} The signature, or empty string if not owner.
+ */
+export async function signRoomAccessAsOwner(room, exp, nonce) {
+  const ownerKeyProof = await getOwnerKeyProof();
+  return hmacSignRoomAccess(ownerKeyProof, room, exp, nonce);
 }
 
 /**

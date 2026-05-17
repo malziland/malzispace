@@ -5,6 +5,11 @@ const express = require('express');
 const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
+// firebase-admin v13 dropped reliable access to FirestoreTimestamp /
+// FirestoreFieldValue from the namespace style — pull them from the
+// modular subpath instead.
+const { Timestamp: FirestoreTimestamp, FieldValue: FirestoreFieldValue } = require('firebase-admin/firestore');
+const { ServerValue: DatabaseServerValue } = require('firebase-admin/database');
 const { RateLimiter } = require('./lib/rateLimiter');
 const { getTrustedClientIp } = require('./lib/clientIp');
 const { randomChallenge, normalizeNonce, verifyPow } = require('./lib/appCheckPow');
@@ -206,6 +211,30 @@ function isWriteAuthorized(data, providedKeyProof) {
   return safeEqualToken(data.key_proof, String(providedKeyProof || ''));
 }
 
+function hasStoredOwnerKeyProof(data) {
+  return !!(data && typeof data.owner_key_proof === 'string' && data.owner_key_proof.length > 0);
+}
+
+function isOwnerAuthorized(data, providedOwnerKeyProof) {
+  if (!hasStoredOwnerKeyProof(data)) return false;
+  if (!KEY_PROOF_RE.test(String(providedOwnerKeyProof || ''))) return false;
+  return safeEqualToken(data.owner_key_proof, String(providedOwnerKeyProof || ''));
+}
+
+// When a space has an owner AND is locked, only the owner may write. Otherwise
+// the existing key_proof check applies. Returns { ok: true } or { ok: false,
+// reason: 'forbidden_no_key' | 'read_only_not_owner' }.
+function checkWriteAuth(data, body) {
+  const ownerProof = String((body && body.owner_key_proof) || '').trim();
+  if (hasStoredOwnerKeyProof(data) && data.read_only === true) {
+    if (isOwnerAuthorized(data, ownerProof)) return { ok: true, asOwner: true };
+    return { ok: false, reason: 'read_only_not_owner' };
+  }
+  const keyProof = String((body && body.key_proof) || '').trim();
+  if (isWriteAuthorized(data, keyProof)) return { ok: true };
+  return { ok: false, reason: 'forbidden_no_key' };
+}
+
 async function loadSpaceDoc(id) {
   const snap = await db.collection('spaces').doc(id).get();
   if (!snap.exists) return null;
@@ -270,7 +299,15 @@ router.use((req, res, next) => {
   next();
 });
 
+// In local/emulator runs the production App Check chain (PoW challenge plus
+// `admin.appCheck().createToken`) cannot work because the service has no
+// service-account credentials for the real project. The bypass is opt-in via
+// env var, must never be set in production deployments, and is intentionally
+// boolean (no per-request override) to keep the surface tiny.
+const APP_CHECK_BYPASS = String(process.env.MZ_DISABLE_APPCHECK || '') === '1';
+
 async function verifyAppCheck(req, res, next) {
+  if (APP_CHECK_BYPASS) return next();
   const token = req.header('X-Firebase-AppCheck');
   if (!token) return sendJson(res, 401, { error: 'app_check_required' });
   try {
@@ -301,8 +338,8 @@ router.get('/appcheck/challenge', async (req, res) => {
       appId,
       challenge,
       difficulty: APP_CHECK_POW_DIFFICULTY,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      expiresAt: admin.firestore.Timestamp.fromMillis(expiresAtMs)
+      createdAt: FirestoreFieldValue.serverTimestamp(),
+      expiresAt: FirestoreTimestamp.fromMillis(expiresAtMs)
     });
 
     return sendJson(res, 200, {
@@ -397,8 +434,17 @@ router.post('/create', async (req, res) => {
     }
     const keyProof = String(body.key_proof || '').trim();
     if (!KEY_PROOF_RE.test(keyProof)) return sendJson(res, 400, { error: 'invalid_key_proof' });
+    // Optional owner_key_proof: enables read-only lock. Without it the space
+    // keeps today's symmetric model (anyone with key_proof can write).
+    const ownerKeyProofRaw = body.owner_key_proof;
+    let ownerKeyProof = null;
+    if (typeof ownerKeyProofRaw === 'string' && ownerKeyProofRaw.length > 0) {
+      const trimmed = ownerKeyProofRaw.trim();
+      if (!KEY_PROOF_RE.test(trimmed)) return sendJson(res, 400, { error: 'invalid_owner_key_proof' });
+      ownerKeyProof = trimmed;
+    }
     const now = Date.now();
-    const expiresAt = admin.firestore.Timestamp.fromDate(new Date(now + TTL_SECONDS * 1000));
+    const expiresAt = FirestoreTimestamp.fromDate(new Date(now + TTL_SECONDS * 1000));
 
     for (let i = 0; i < 5; i++) {
       const id = generateId(8);
@@ -415,8 +461,10 @@ router.post('/create', async (req, res) => {
           content_nonce: null,
           content_algo: null,
           key_proof: keyProof,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          owner_key_proof: ownerKeyProof,
+          read_only: !!ownerKeyProof,
+          createdAt: FirestoreFieldValue.serverTimestamp(),
+          updatedAt: FirestoreFieldValue.serverTimestamp(),
           expiresAt
         });
         return sendJson(res, 200, { ok: true, id });
@@ -473,6 +521,8 @@ router.get('/load', async (req, res) => {
     out.content_nonce = data.content_nonce || null;
     out.content_algo = data.content_algo || null;
     if (data.content_tag) out.content_tag = data.content_tag;
+    out.has_owner = hasStoredOwnerKeyProof(data);
+    out.read_only = !!data.read_only;
 
     return sendJson(res, 200, out);
   } catch (err) {
@@ -503,7 +553,6 @@ router.post('/save', async (req, res) => {
         return sendJson(res, 400, { error: 'invalid_title_algo' });
     }
     const clientVersion = Number.isFinite(body.version) ? Number(body.version) : 0;
-    const keyProof = String(body.key_proof || '').trim();
 
     const isZkReq = !!body.zk;
     const encCipher = String(body.content_enc || '');
@@ -542,7 +591,8 @@ router.post('/save', async (req, res) => {
       const data = snap.data() || {};
       if (isExpiredData(data, Date.now())) return { error: 'expired' };
       if (!data.zk) return { error: 'e2e_required' };
-      if (!isWriteAuthorized(data, keyProof)) return { error: 'forbidden_no_key' };
+      const auth = checkWriteAuth(data, body);
+      if (!auth.ok) return { error: auth.reason };
       const serverVersion = Number.isFinite(data.version) ? data.version : 0;
       if (clientVersion !== serverVersion) {
         return { error: 'version_conflict', serverVersion };
@@ -554,7 +604,7 @@ router.post('/save', async (req, res) => {
         title_nonce: titleNonce || null,
         title_algo: titleAlgo || null,
         version: newVersion,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FirestoreFieldValue.serverTimestamp()
       };
 
       update.zk = true;
@@ -562,7 +612,7 @@ router.post('/save', async (req, res) => {
       update.content_nonce = encNonce;
       update.content_algo = encAlgo;
       update.content_tag = encTag;
-      update.content = admin.firestore.FieldValue.delete();
+      update.content = FirestoreFieldValue.delete();
 
       tx.update(ref, update);
 
@@ -573,6 +623,7 @@ router.post('/save', async (req, res) => {
     if (result && result.error === 'expired') return sendJson(res, 410, { error: 'expired' });
     if (result && result.error === 'e2e_required') return sendJson(res, 403, { error: 'e2e_required' });
     if (result && result.error === 'forbidden_no_key') return sendJson(res, 403, { error: 'forbidden_no_key' });
+    if (result && result.error === 'read_only_not_owner') return sendJson(res, 403, { error: 'read_only_not_owner' });
     if (result && result.error === 'version_conflict') {
       return sendJson(res, 409, { error: 'version_conflict', server_version: result.serverVersion });
     }
@@ -608,21 +659,21 @@ router.post('/title', async (req, res) => {
       if (!ALG_RE.test(titleAlgo) || !ALLOWED_CONTENT_ALGOS.has(titleAlgo))
         return sendJson(res, 400, { error: 'invalid_title_algo' });
     }
-    const keyProof = String(body.key_proof || '').trim();
     const ref = db.collection('spaces').doc(id);
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists) throw Object.assign(new Error('not_found'), { code: 'not_found' });
       const data = snap.data() || {};
       if (isExpiredData(data, Date.now())) throw Object.assign(new Error('expired'), { code: 'expired' });
-      if (!isWriteAuthorized(data, keyProof)) throw Object.assign(new Error('forbidden_no_key'), { code: 'forbidden_no_key' });
+      const auth = checkWriteAuth(data, body);
+      if (!auth.ok) throw Object.assign(new Error(auth.reason), { code: auth.reason });
       const serverVersion = Number.isFinite(data.version) ? data.version : 0;
       tx.update(ref, {
         title_enc: titleEnc || null,
         title_nonce: titleNonce || null,
         title_algo: titleAlgo || null,
         version: serverVersion + 1,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FirestoreFieldValue.serverTimestamp()
       });
     });
     return sendJson(res, 200, { ok: true });
@@ -630,6 +681,7 @@ router.post('/title', async (req, res) => {
     if (err && err.code === 'not_found') return sendJson(res, 404, { error: 'not_found' });
     if (err && err.code === 'expired') return sendJson(res, 410, { error: 'expired' });
     if (err && err.code === 'forbidden_no_key') return sendJson(res, 403, { error: 'forbidden_no_key' });
+    if (err && err.code === 'read_only_not_owner') return sendJson(res, 403, { error: 'read_only_not_owner' });
     console.error('title error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
@@ -641,13 +693,13 @@ router.post('/yjs/push', async (req, res) => {
     const id = String(body.id || '').trim();
     if (!ID_RE.test(id)) return sendJson(res, 400, { error: 'invalid_id' });
     const ip = getClientIp(req);
-    const keyProof = String(body.key_proof || '').trim();
 
     const snap = await loadSpaceDoc(id);
     if (!snap) return sendJson(res, 404, { error: 'not_found' });
     const spaceData = snap.data() || {};
     if (isExpiredData(spaceData, Date.now())) return sendJson(res, 410, { error: 'expired' });
-    if (!isWriteAuthorized(spaceData, keyProof)) return sendJson(res, 403, { error: 'forbidden_no_key' });
+    const auth = checkWriteAuth(spaceData, body);
+    if (!auth.ok) return sendJson(res, 403, { error: auth.reason });
     const updateEnc = String(body.update_enc || '');
     const updateNonce = String(body.update_nonce || '');
     const updateAlgo = String(body.update_algo || '');
@@ -786,7 +838,7 @@ router.post('/presence', async (req, res) => {
     if (!PRESENCE_TOKEN_RE.test(token)) token = crypto.randomBytes(12).toString('hex');
 
     const ref = rtdb.ref(`presence/${id}`);
-    await ref.child(token).set(admin.database.ServerValue.TIMESTAMP);
+    await ref.child(token).set(DatabaseServerValue.TIMESTAMP);
 
     const snapPresence = await ref.get();
     const now = Date.now();
@@ -808,6 +860,46 @@ router.post('/presence', async (req, res) => {
     return sendJson(res, 200, { ok: true, count });
   } catch (err) {
     console.error('presence error', err?.code || err?.message);
+    return sendJson(res, 500, { error: 'server_error' });
+  }
+});
+
+router.post('/lock', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const id = String(body.id || '').trim();
+    if (!ID_RE.test(id)) return sendJson(res, 400, { error: 'invalid_id' });
+    const ip = getClientIp(req);
+    // Reuse save limiters: same shape, expected to be infrequent.
+    if (!rateLimitMany(res, [
+      { limiter: RL_SAVE_IP, key: `lock_ip:${ip}` },
+      { limiter: RL_SAVE, key: `lock:${ip}:${id}` }
+    ])) return;
+
+    const ownerKeyProof = String(body.owner_key_proof || '').trim();
+    if (!KEY_PROOF_RE.test(ownerKeyProof)) return sendJson(res, 400, { error: 'invalid_owner_key_proof' });
+    const desiredReadOnly = !!body.read_only;
+
+    const ref = db.collection('spaces').doc(id);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw Object.assign(new Error('not_found'), { code: 'not_found' });
+      const data = snap.data() || {};
+      if (isExpiredData(data, Date.now())) throw Object.assign(new Error('expired'), { code: 'expired' });
+      if (!hasStoredOwnerKeyProof(data)) throw Object.assign(new Error('no_owner'), { code: 'no_owner' });
+      if (!isOwnerAuthorized(data, ownerKeyProof)) throw Object.assign(new Error('not_owner'), { code: 'not_owner' });
+      tx.update(ref, {
+        read_only: desiredReadOnly,
+        updatedAt: FirestoreFieldValue.serverTimestamp()
+      });
+    });
+    return sendJson(res, 200, { ok: true, read_only: desiredReadOnly });
+  } catch (err) {
+    if (err && err.code === 'not_found') return sendJson(res, 404, { error: 'not_found' });
+    if (err && err.code === 'expired') return sendJson(res, 410, { error: 'expired' });
+    if (err && err.code === 'no_owner') return sendJson(res, 404, { error: 'no_owner' });
+    if (err && err.code === 'not_owner') return sendJson(res, 403, { error: 'read_only_not_owner' });
+    console.error('lock error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });
@@ -918,7 +1010,7 @@ exports.cleanupExpired = onSchedule({
   schedule: 'every 60 minutes',
   timeZone: 'UTC'
 }, async () => {
-  const now = admin.firestore.Timestamp.now();
+  const now = FirestoreTimestamp.now();
   let total = 0;
   let rtdbFailedBatches = 0;
 

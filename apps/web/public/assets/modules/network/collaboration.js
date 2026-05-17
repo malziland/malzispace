@@ -17,7 +17,9 @@ import {
   fromB64,
   toB64,
   getWriteKeyProof,
+  getOwnerKeyProof,
   signRoomAccess,
+  signRoomAccessAsOwner,
   encryptBytes,
   decryptBytes,
   encryptContent,
@@ -353,6 +355,8 @@ export function startAutosave() {
 
 export async function saveNow() {
   if (!requireKeyOrBlock()) return;
+  // Readers of locked spaces cannot save — skip the round-trip entirely.
+  if (ctx.readOnly && !ctx.isOwner) return;
   if (ctx.saveInFlightPromise) {
     ctx.saveQueuedAfterFlight = true;
     return ctx.saveInFlightPromise;
@@ -372,6 +376,10 @@ export async function saveNow() {
         version: ctx.state.version, zk: true, key_proof: keyProof,
         content_enc: enc.ciphertext, content_nonce: enc.nonce, content_algo: enc.algo
       };
+      if (ctx.isOwner) {
+        const ownerKeyProof = await getOwnerKeyProof();
+        if (ownerKeyProof) body.owner_key_proof = ownerKeyProof;
+      }
       if (titleEncResult) {
         body.title_enc = titleEncResult.ciphertext;
         body.title_nonce = titleEncResult.nonce;
@@ -413,22 +421,50 @@ async function getWsUrl() {
   const room = encodeURIComponent(ctx.SPACE_ID);
   const rawUrl = window.MZ_COLLAB_WS_URL
     || ((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/collab?room=' + room);
+  const exp = String(Date.now() + WS_AUTH_TTL_MS);
+  const nonce = toB64(crypto.getRandomValues(new Uint8Array(12)));
+  const asOwner = !!ctx.isOwner;
+  const sig = asOwner
+    ? await signRoomAccessAsOwner(ctx.SPACE_ID, exp, nonce)
+    : await signRoomAccess(ctx.SPACE_ID, exp, nonce);
   try {
     const u = new URL(rawUrl, window.location.origin);
     if (!u.searchParams.get('room')) u.searchParams.set('room', ctx.SPACE_ID);
-    const exp = String(Date.now() + WS_AUTH_TTL_MS);
-    const nonce = toB64(crypto.getRandomValues(new Uint8Array(12)));
-    const sig = await signRoomAccess(ctx.SPACE_ID, exp, nonce);
-    if (sig) { u.searchParams.set('exp', exp); u.searchParams.set('nonce', nonce); u.searchParams.set('sig', sig); }
+    if (sig) {
+      u.searchParams.set('exp', exp);
+      u.searchParams.set('nonce', nonce);
+      if (asOwner) {
+        u.searchParams.set('is_owner', '1');
+        u.searchParams.set('owner_sig', sig);
+      } else {
+        u.searchParams.set('sig', sig);
+      }
+    }
     return u.toString();
   } catch (e) {
-    const exp = String(Date.now() + WS_AUTH_TTL_MS);
-    const nonce = toB64(crypto.getRandomValues(new Uint8Array(12)));
-    const sig = await signRoomAccess(ctx.SPACE_ID, exp, nonce);
     let url = rawUrl.includes('room=') ? rawUrl : (rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'room=' + room);
-    if (sig) url += `&exp=${encodeURIComponent(exp)}&nonce=${encodeURIComponent(nonce)}&sig=${encodeURIComponent(sig)}`;
+    if (sig) {
+      url += `&exp=${encodeURIComponent(exp)}&nonce=${encodeURIComponent(nonce)}`;
+      if (asOwner) {
+        url += `&is_owner=1&owner_sig=${encodeURIComponent(sig)}`;
+      } else {
+        url += `&sig=${encodeURIComponent(sig)}`;
+      }
+    }
     return url;
   }
+}
+
+function handleControlFrame(rawText) {
+  try {
+    const msg = JSON.parse(rawText);
+    if (!msg || typeof msg !== 'object') return;
+    if (msg.type === 'lock_state') {
+      if (typeof ctx.applyLockState === 'function') {
+        ctx.applyLockState({ readOnly: !!msg.read_only });
+      }
+    }
+  } catch (e) {}
 }
 
 async function handleRelayMessage(data) {
@@ -522,6 +558,12 @@ async function connectWs() {
   };
   ctx.ws.onerror = () => { ctx.wsReady = false; };
   ctx.ws.onmessage = (evt) => {
+    // The relay sends two kinds of frames: binary (encrypted Yjs / awareness
+    // payloads) and string (server-issued control frames, e.g. lock_state).
+    if (typeof evt.data === 'string') {
+      handleControlFrame(evt.data);
+      return;
+    }
     handleRelayMessage(new Uint8Array(evt.data)).catch(() => {});
   };
 }
@@ -569,6 +611,9 @@ async function flushPersistQueue() {
 
 async function pushYjsUpdate(update, full = false) {
   if (ctx.expiredShown) return;
+  // Readers cannot persist updates against a locked space; the API would
+  // reject and the relay would drop the broadcast anyway.
+  if (ctx.readOnly && !ctx.isOwner) return;
   const enc = await encryptBytes(update);
   if (!enc) return;
   const keyProof = await getWriteKeyProof();
@@ -577,6 +622,10 @@ async function pushYjsUpdate(update, full = false) {
     update_enc: toB64(enc), update_nonce: 'v0', update_algo: 'aes-256-gcm',
     key_proof: keyProof, full: !!full
   };
+  if (ctx.isOwner) {
+    const ownerKeyProof = await getOwnerKeyProof();
+    if (ownerKeyProof) payload.owner_key_proof = ownerKeyProof;
+  }
   const res = await api('yjs/push', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -652,6 +701,9 @@ async function legacyLoadAndRender(options = {}) {
   if (!res) return null;
   if (res.error === 'not_found' || res.error === 'expired') { showExpired(); return null; }
   if (res.error) return null;
+  if (typeof ctx.applyLockState === 'function') {
+    ctx.applyLockState({ readOnly: !!res.read_only, hasOwner: !!res.has_owner });
+  }
   let content = '';
   if (res.zk) {
     const plain = await decryptContent(res);

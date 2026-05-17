@@ -22,6 +22,7 @@ import { initKeyboard } from './editor/keyboard.js';
 import { initToolbar, bindColorPicker } from './ui/toolbar.js';
 import { initModals } from './ui/modals.js';
 import { initStatus } from './ui/status.js';
+import { initLock } from './ui/lock.js';
 import { initCollaboration, init, saveNow } from './network/collaboration.js';
 import { copyRichText, setButtonCopiedState } from './editor/clipboard.js';
 import { storedContentToHtml } from './services/sanitizer.js';
@@ -81,6 +82,7 @@ initKeyboard();
 initToolbar();
 initModals();
 initStatus();
+initLock();
 initCollaboration();
 
 // ── Color pickers ───────────────────────────────────────────────

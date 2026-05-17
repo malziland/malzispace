@@ -62,6 +62,7 @@ function normalizeLinkInput(raw) {
  */
 async function triggerToolbarButton(btn) {
   if (!btn || ctx.expiredShown) return;
+  if (ctx.readOnly && !ctx.isOwner) return;
   const action = btn.getAttribute('data-action') || '';
   if (action === 'clearColors') {
     clearColorFormatting();
@@ -144,6 +145,7 @@ export function initToolbar() {
   ctx.editorToolbar?.addEventListener('click', (evt) => {
     const btn = closestFromEventTarget(evt.target, 'button[data-cmd],button[data-action]');
     if (!btn || ctx.expiredShown) return;
+    if (ctx.readOnly && !ctx.isOwner) return;
     evt.preventDefault();
     syncPendingPostCommandCaret();
     void triggerToolbarButton(btn);
@@ -152,6 +154,7 @@ export function initToolbar() {
   ctx.editorToolbar?.addEventListener('pointerdown', (evt) => {
     const btn = closestFromEventTarget(evt.target, 'button[data-cmd],button[data-action]');
     if (!btn || ctx.expiredShown) return;
+    if (ctx.readOnly && !ctx.isOwner) return;
     preserveToolbarSelection(evt);
   });
   ctx.editorToolbar?.addEventListener('mousedown', preserveToolbarSelection);

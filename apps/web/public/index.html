@@ -32,6 +32,11 @@
       <form id="createForm" class="hero-form">
         <input type="text" id="spaceTitle" maxlength="80" placeholder="Titel (optional)" data-i18n-placeholder="landing.form.placeholder" />
         <input type="text" id="mzWebsite" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" class="hp-field" />
+        <label class="hero-lock-toggle">
+          <input type="checkbox" id="lockOnCreate" />
+          <span data-i18n="landing.lock.label">Beim Erstellen sperren (nur du kannst entsperren)</span>
+        </label>
+        <p class="hero-lock-hint" id="lockOnCreateHint" hidden data-i18n="landing.lock.hint">Du bekommst zusätzlich einen Owner-Link. Bewahre ihn wie ein Passwort auf – ohne ihn bleibt der Space dauerhaft gesperrt.</p>
         <button type="submit" class="btn primary" data-i18n="landing.form.submit">Neuen Space erstellen</button>
       </form>
     </header>

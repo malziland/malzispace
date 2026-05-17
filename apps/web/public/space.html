@@ -30,6 +30,9 @@
         <span id="titleLabel" class="title-label" hidden data-i18n="space.title.label">Titel</span>
         <span id="titleView" class="title" hidden></span>
         <div class="toolbar-actions">
+          <button id="lockToggle" class="btn icon-only lock-toggle" type="button" hidden data-state="open" aria-label="Space sperren" data-i18n-aria-label="space.lock.toggleUnlocked" title="Space sperren" data-i18n-title="space.lock.toggleUnlocked">
+            <span class="lock-icon" aria-hidden="true">🔓</span>
+          </button>
           <button id="showQr" class="btn" type="button" data-i18n="space.button.share">Teilen</button>
         </div>
         <span id="presence" class="pill">…</span>
@@ -40,6 +43,21 @@
     <div id="expiredNotice" class="expired-banner" hidden>
       <span data-i18n="space.expired.notice">Dieser Space ist abgelaufen und wurde nach 24&nbsp;Stunden automatisch gelöscht.</span>
       <a class="expired-link" href="https://malzi.space" data-i18n="space.expired.back">Zur Startseite</a>
+    </div>
+
+    <div id="ownerWelcome" class="owner-welcome" hidden role="dialog" aria-labelledby="ownerWelcomeTitle">
+      <div class="owner-welcome-inner">
+        <strong id="ownerWelcomeTitle" data-i18n="owner.welcome.title">Du bist Owner dieses Spaces</strong>
+        <p data-i18n="owner.welcome.warning">Die aktuelle Browser-URL enthält deinen Owner-Link – bewahre sie wie ein Passwort auf. Geht der Owner-Link verloren, bleibt der Space dauerhaft gesperrt.</p>
+        <label class="owner-welcome-share">
+          <span data-i18n="owner.welcome.shareLabel">Teilen-Link (nur Lesen)</span>
+          <input id="ownerWelcomeShareUrl" type="text" readonly />
+        </label>
+        <div class="owner-welcome-actions">
+          <button id="ownerWelcomeCopy" type="button" class="btn" data-i18n="owner.welcome.copy">Link kopieren</button>
+          <button id="ownerWelcomeDismiss" type="button" class="btn ghost" data-i18n="owner.welcome.dismiss">Verstanden</button>
+        </div>
+      </div>
     </div>
 
     <main class="card editor-wrap">
