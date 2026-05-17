@@ -161,15 +161,11 @@ async function main() {
     await waitFor(async () => {
       return ownerPage.evaluate(() => {
         const banner = document.getElementById('ownerWelcome');
-        const input = document.getElementById('ownerWelcomeShareUrl');
         if (!banner || banner.hasAttribute('hidden')) return false;
-        if (!input || !input.value || !input.value.includes('#')) return false;
-        const hash = input.value.slice(input.value.indexOf('#') + 1);
-        // Reader URL must not contain the owner-secret separator in the hash.
-        return hash.indexOf('.') < 0;
+        return !!(banner.textContent || '').trim();
       });
-    }, { timeoutMs: 8000, label: 'owner-welcome banner with reader URL' });
-    pass('PASS owner_welcome_banner - shows once with stripped reader URL');
+    }, { timeoutMs: 8000, label: 'owner-welcome banner visible' });
+    pass('PASS owner_welcome_banner - shown once with single-line hint');
 
     // -- Page B: reader -----------------------------------------------------
     const dot = hash.indexOf('.');

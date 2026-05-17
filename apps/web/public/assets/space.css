@@ -55,18 +55,25 @@ footer.center{ text-align:center; margin-top:18px; }
 .btn.icon-only{
   padding: 6px 10px;
   min-width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .lock-toggle .lock-icon{
-  display: inline-block;
-  font-size: 1.05em;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.lock-toggle[data-state="locked"]{
-  border-color: var(--accent);
-  color: var(--accent);
-}
+.lock-toggle .lock-icon--open{ display: none; }
+.lock-toggle .lock-icon--closed{ display: inline-block; }
+.lock-toggle[data-state="open"] .lock-icon--closed{ display: none; }
+.lock-toggle[data-state="open"] .lock-icon--open{ display: inline-block; }
 .lock-toggle[data-state="readonly"]{
-  opacity: .7;
+  opacity: .55;
   cursor: default;
 }
 body.is-readonly #editor{
@@ -78,26 +85,28 @@ body.is-readonly #editorToolbar [data-action]{
   pointer-events: none;
 }
 .owner-welcome{
-  margin: 0 0 12px;
-  border: 1px solid var(--accent);
-  border-radius: 10px;
-  padding: 14px 16px;
-  background: var(--accent-dim, rgba(56,189,248,.08));
+  margin: 8px 0 0;
+  padding: 8px 10px 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .82rem;
+  opacity: .75;
+  border-left: 2px solid var(--accent);
 }
-.owner-welcome-inner{ display: grid; gap: 10px; }
-.owner-welcome p{ margin: 0; font-size: .9rem; line-height: 1.4; opacity: .9; }
-.owner-welcome-share{ display: grid; gap: 4px; font-size: .8rem; }
-.owner-welcome-share input{
-  width: 100%;
-  padding: 8px 10px;
-  font: inherit;
-  border-radius: 8px;
-  border: 1px solid var(--border, rgba(255,255,255,.18));
-  background: rgba(0,0,0,.25);
+.owner-welcome-text{ flex: 1; line-height: 1.4; }
+.owner-welcome-close{
+  background: transparent;
+  border: 0;
   color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  opacity: .6;
 }
-.owner-welcome-actions{ display: flex; gap: 8px; flex-wrap: wrap; }
-.btn.ghost{ background: transparent; }
+.owner-welcome-close:hover{ opacity: 1; }
+.owner-welcome[hidden]{ display: none !important; }
 .title-label{
   font-size: 13px;
   color: var(--muted);

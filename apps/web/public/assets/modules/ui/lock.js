@@ -8,9 +8,6 @@ import ctx, { t } from '../core/context.js';
 import { setEditorEditable } from '../services/selection.js';
 import { getOwnerKeyProof, isOwnerFromHash } from '../services/crypto.js';
 
-const LOCK_ICON_LOCKED = '🔒';
-const LOCK_ICON_OPEN = '🔓';
-
 let lockButton = null;
 let inFlightToggle = false;
 let welcomeShown = false;
@@ -41,9 +38,6 @@ function updateLockButtonUi() {
   }
   lockButton.hidden = false;
 
-  const iconEl = lockButton.querySelector('.lock-icon');
-  if (iconEl) iconEl.textContent = readOnly ? LOCK_ICON_LOCKED : LOCK_ICON_OPEN;
-
   if (isOwner) {
     const labelKey = readOnly ? 'space.lock.toggleLocked' : 'space.lock.toggleUnlocked';
     const label = t(labelKey);
@@ -53,6 +47,7 @@ function updateLockButtonUi() {
     lockButton.disabled = false;
   } else {
     const label = t('space.lock.readOnly');
+    // Readers only ever see the closed-lock icon; data-state controls SVG via CSS.
     lockButton.setAttribute('data-state', 'readonly');
     lockButton.setAttribute('aria-label', label);
     lockButton.setAttribute('title', label);
@@ -71,14 +66,6 @@ function updateEditorAccess() {
   setBodyReadOnly(shouldBlock);
 }
 
-function readerShareableUrl() {
-  const href = window.location.href;
-  const hash = window.location.hash || '';
-  if (!hash || hash.indexOf('.') < 0) return href;
-  const keyOnly = hash.replace(/^#/, '').split('.')[0];
-  return href.slice(0, href.length - hash.length) + '#' + keyOnly;
-}
-
 function maybeShowOwnerWelcome() {
   if (welcomeShown) return;
   if (!ctx.isOwner || !ctx.hasOwner) return;
@@ -91,28 +78,9 @@ function maybeShowOwnerWelcome() {
   try { sessionStorage.removeItem('mz_fresh_owner_' + String(ctx.SPACE_ID || '')); } catch (e) {}
 
   const banner = document.getElementById('ownerWelcome');
-  const shareInput = document.getElementById('ownerWelcomeShareUrl');
-  const copyBtn = document.getElementById('ownerWelcomeCopy');
-  const dismissBtn = document.getElementById('ownerWelcomeDismiss');
-  if (!banner || !shareInput) return;
-  shareInput.value = readerShareableUrl();
+  if (!banner) return;
   banner.hidden = false;
-
-  if (copyBtn) {
-    copyBtn.addEventListener('click', async () => {
-      try {
-        const { copyText, setButtonCopiedState } = await import('../editor/clipboard.js');
-        if (await copyText(shareInput.value)) {
-          setButtonCopiedState(copyBtn, t('owner.welcome.copy'));
-          return;
-        }
-      } catch (e) {}
-      try {
-        shareInput.select();
-        document.execCommand('copy');
-      } catch (e) {}
-    });
-  }
+  const dismissBtn = document.getElementById('ownerWelcomeDismiss');
   if (dismissBtn) {
     dismissBtn.addEventListener('click', () => { banner.hidden = true; });
   }
