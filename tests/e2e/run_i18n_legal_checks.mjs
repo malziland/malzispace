@@ -65,7 +65,7 @@ async function checkPrivacy(page, results) {
   const back = (await textOf(page, '.back-link')) || '';
 
   results.push({ name: 'privacy heading translated', pass: /^Privacy$/i.test(heading.trim()), detail: heading.trim() });
-  results.push({ name: 'privacy updated translated', pass: /March 2026/i.test(updated), detail: updated.trim() });
+  results.push({ name: 'privacy updated translated', pass: /May 2026/i.test(updated), detail: updated.trim() });
   results.push({
     name: 'privacy service regions retained',
     pass: /eur3/.test(servicesText)

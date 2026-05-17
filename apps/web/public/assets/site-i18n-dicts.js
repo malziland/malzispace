@@ -45,7 +45,7 @@
 
       'privacy.pageTitle': 'Datenschutz – malziSPACE',
       'privacy.heading': 'Datenschutz',
-      'privacy.kicker': 'Verständlich erklärt · Stand: März 2026',
+      'privacy.kicker': 'Verständlich erklärt · Stand: Mai 2026',
       'privacy.highlight.heading': '✓ Das Wichtigste zuerst',
       'privacy.highlight.body': 'Deine Spaces sind <strong>Ende-zu-Ende-verschlüsselt</strong>. Wir verlangen keine Registrierung, keine Klarnamen und keine E-Mail. <strong>Für Betrieb und Missbrauchsschutz fallen aber technische Metadaten an.</strong>',
       'privacy.highlight.item1': 'Kein Tracking – keine Analytics, kein Pixel',
@@ -203,7 +203,7 @@
 
       'privacy.pageTitle': 'Privacy – malziSPACE',
       'privacy.heading': 'Privacy',
-      'privacy.kicker': 'Plain-language version · Updated: March 2026',
+      'privacy.kicker': 'Plain-language version · Updated: May 2026',
       'privacy.highlight.heading': '✓ The most important points first',
       'privacy.highlight.body': 'Your spaces are <strong>end-to-end encrypted</strong>. We do not ask for registration, real names, or email addresses. <strong>Technical metadata is still generated for operations and abuse protection.</strong>',
       'privacy.highlight.item1': 'No tracking — no analytics, no pixel',
