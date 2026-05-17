@@ -104,6 +104,7 @@ async function getRoomAuthEntry(room, nowMs) {
   const entry = {
     keyProof,
     ownerKeyProof,
+    readOnly: !!data.read_only,
     cacheUntil: nowMs + WS_AUTH_CACHE_TTL_MS
   };
   roomAuthCache.set(room, entry);
@@ -121,13 +122,22 @@ function broadcastLockState(room, readOnly) {
   }
 }
 
-function attachRoomState(room) {
+function attachRoomState(room, initial) {
   let state = roomState.get(room);
   if (state) {
     state.refCount += 1;
     return state;
   }
-  state = { readOnly: false, ownerKeyProof: null, listener: null, refCount: 1 };
+  // Seed the in-memory state from the auth-cache entry so the first
+  // broadcast on connect carries the *current* lock value, not the
+  // listener's pre-snapshot default (which used to flap clients from
+  // read_only:true to read_only:false right after they connected).
+  state = {
+    readOnly: !!(initial && initial.readOnly),
+    ownerKeyProof: (initial && initial.ownerKeyProof) || null,
+    listener: null,
+    refCount: 1
+  };
   roomState.set(room, state);
   try {
     state.listener = db.collection('spaces').doc(room).onSnapshot(
@@ -194,22 +204,23 @@ wss.on('connection', async (ws, req) => {
   }
 
   const isOwnerClaim = url.searchParams.get('is_owner') === '1';
+  let authEntry = null;
   try {
-    const entry = await getRoomAuthEntry(room, Date.now());
-    if (!entry) {
+    authEntry = await getRoomAuthEntry(room, Date.now());
+    if (!authEntry) {
       releaseConcurrent(ipOpenCounts, ip);
       try { ws.close(1008, 'auth_invalid'); } catch (e) {}
       return;
     }
     if (isOwnerClaim) {
-      if (!entry.ownerKeyProof || !verifyWsAuthQuery(url.searchParams, room, entry.ownerKeyProof, { sigParamName: 'owner_sig' })) {
+      if (!authEntry.ownerKeyProof || !verifyWsAuthQuery(url.searchParams, room, authEntry.ownerKeyProof, { sigParamName: 'owner_sig' })) {
         releaseConcurrent(ipOpenCounts, ip);
         try { ws.close(1008, 'auth_invalid'); } catch (e) {}
         return;
       }
       ws.isOwner = true;
     } else {
-      if (!verifyWsAuthQuery(url.searchParams, room, entry.keyProof)) {
+      if (!verifyWsAuthQuery(url.searchParams, room, authEntry.keyProof)) {
         releaseConcurrent(ipOpenCounts, ip);
         try { ws.close(1008, 'auth_invalid'); } catch (e) {}
         return;
@@ -242,9 +253,10 @@ wss.on('connection', async (ws, req) => {
   ws.msgWindowCount = 0;
   ws.byteBudget = { windowStartedAt: 0, used: 0 };
 
-  const lockState = attachRoomState(room);
+  const lockState = attachRoomState(room, authEntry);
   // Send current lock state to the new client so its UI is consistent without
-  // waiting for the next toggle.
+  // waiting for the next toggle. The seed value comes from the auth cache,
+  // which read read_only synchronously alongside the key material.
   try {
     ws.send(JSON.stringify({ type: 'lock_state', read_only: !!lockState.readOnly }));
   } catch (e) {}

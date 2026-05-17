@@ -229,11 +229,16 @@ async function main() {
     await ownerPage2.goto(initialOwnerUrl, { waitUntil: 'domcontentloaded' });
     await ownerPage2.waitForSelector('#editor', { timeout: 10_000 });
     await waitFor(() => isEditorEditable(ownerPage2), { timeoutMs: 15_000, label: 'owner editor editable in fresh tab' });
+    // Critical regression guard: the lock state from /api/load (read_only=true)
+    // must not be overwritten by the relay's initial lock_state broadcast.
+    // We sleep briefly so the WS handshake (and its first frame) has time to
+    // arrive, then check the button still reads 'locked'.
+    await ownerPage2.waitForTimeout(2500);
     await waitFor(async () => {
       const s = await getLockButtonState(ownerPage2);
       return s.exists && !s.hidden && s.state === 'locked' && !s.disabled;
-    }, { timeoutMs: 8000, label: 'fresh-tab owner sees enabled lock' });
-    pass('PASS fresh_owner_tab - pasting owner URL in a new tab keeps full owner powers');
+    }, { timeoutMs: 8000, label: 'fresh-tab owner sees enabled lock with state=locked' });
+    pass('PASS fresh_owner_tab - pasting owner URL in a new tab keeps full owner powers (lock stays locked)');
 
     await ownerContext.close();
     await readerContext.close();
