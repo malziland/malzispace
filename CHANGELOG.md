@@ -2,8 +2,6 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
-## [Unreleased]
-
 ## [1.1.1] - 2026-05-17
 
 Externe Audit-Befunde umgesetzt: Release-Gate-Reparatur, Privacy-Versprechen
