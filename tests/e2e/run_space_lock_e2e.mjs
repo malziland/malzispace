@@ -212,6 +212,26 @@ async function main() {
     if (!readerLockBtn.disabled) throw new Error('reader lock indicator should be disabled (no toggle for non-owners)');
     pass('PASS reader_sees_lock_indicator - disabled lock icon visible');
 
+    // The Owner-Link copy button must NOT leak into the reader UI. Check
+    // both the `hidden` attribute and the computed display: a CSS rule with
+    // an explicit `display` value silently overrides the HTML attribute, so
+    // the attribute alone is not enough.
+    const readerOwnerBtnState = await readerPage.evaluate(() => {
+      const btn = document.getElementById('copyOwnerLink');
+      if (!btn) return { missing: true };
+      return {
+        hidden: btn.hasAttribute('hidden'),
+        display: getComputedStyle(btn).display
+      };
+    });
+    if (readerOwnerBtnState.missing) {
+      pass('PASS reader_no_owner_button - button not rendered');
+    } else {
+      if (!readerOwnerBtnState.hidden) throw new Error('reader: copyOwnerLink missing hidden attribute');
+      if (readerOwnerBtnState.display !== 'none') throw new Error(`reader: copyOwnerLink is computed display=${readerOwnerBtnState.display} — CSS overrides the hidden attribute`);
+      pass('PASS reader_no_owner_button - Owner-Link copy button hidden for readers');
+    }
+
     // -- Owner unlocks; reader UI must update live --------------------------
     await ownerPage.click('#lockToggle');
     await waitForLockState(readerPage, 'unlocked', { timeoutMs: 8000 });

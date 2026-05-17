@@ -52,6 +52,10 @@ footer.center{ text-align:center; margin-top:18px; }
   gap: 8px;
   flex-wrap: wrap;
 }
+/* `display: inline-flex` on these buttons would otherwise win against the
+   browser-default `[hidden] { display: none }` rule, leaving the JS-driven
+   visibility toggle silently broken. Re-assert hidden globally. */
+[hidden]{ display: none !important; }
 .icon-action{
   display: inline-flex;
   align-items: center;

@@ -204,7 +204,7 @@ wss.on('connection', async (ws, req) => {
   }
 
   const isOwnerClaim = url.searchParams.get('is_owner') === '1';
-  let authEntry = null;
+  let authEntry;
   try {
     authEntry = await getRoomAuthEntry(room, Date.now());
     if (!authEntry) {
