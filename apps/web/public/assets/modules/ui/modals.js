@@ -32,17 +32,18 @@ export function closeQrModal() {
   try { document.body.classList.remove('has-modal-open'); } catch (e) {}
 }
 
+import { getReaderLinkUrl } from '../services/crypto.js';
+
 /**
- * Compute the URL to share. For owner-mode (hash contains `<key>.<ownerSecret>`)
- * the owner secret is stripped — the owner must never accidentally share their
- * own credential when they meant to share read access.
+ * Compute the URL to share. Always strips any owner-secret segment so the
+ * owner cannot accidentally hand out their write credential. After the
+ * address bar has been emptied via stripHashFromUrl(), the reader URL is
+ * reconstructed from the cached content key.
  */
 function shareableUrl() {
-  const href = location.href;
-  const hash = location.hash || '';
-  if (!hash || hash.indexOf('.') < 0) return href;
-  const keyOnly = hash.replace(/^#/, '').split('.')[0];
-  return href.slice(0, href.length - hash.length) + '#' + keyOnly;
+  const fromCache = getReaderLinkUrl();
+  if (fromCache) return fromCache;
+  return location.href;
 }
 
 /** Render the QR code inside the modal. */

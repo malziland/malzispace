@@ -6,7 +6,12 @@
  */
 import ctx, { t } from '../core/context.js';
 import { setEditorEditable } from '../services/selection.js';
-import { getOwnerKeyProof, isOwnerFromHash } from '../services/crypto.js';
+import {
+  getOwnerKeyProof,
+  isOwnerFromHash,
+  getOwnerLinkUrl,
+  stripHashFromUrl,
+} from '../services/crypto.js';
 
 let lockButton = null;
 let inFlightToggle = false;
@@ -66,6 +71,25 @@ function updateEditorAccess() {
   setBodyReadOnly(shouldBlock);
 }
 
+async function copyOwnerUrl(buttonForFeedback) {
+  const url = getOwnerLinkUrl();
+  if (!url) return false;
+  try {
+    const { copyText, setButtonCopiedState } = await import('../editor/clipboard.js');
+    if (await copyText(url)) {
+      if (buttonForFeedback) {
+        setButtonCopiedState(buttonForFeedback, buttonForFeedback.textContent || t('owner.welcome.copy'));
+      }
+      return true;
+    }
+  } catch (e) {}
+  try {
+    window.prompt(t('owner.welcome.copy'), url);
+    return true;
+  } catch (e) {}
+  return false;
+}
+
 function maybeShowOwnerWelcome() {
   if (welcomeShown) return;
   if (!ctx.isOwner || !ctx.hasOwner) return;
@@ -80,6 +104,10 @@ function maybeShowOwnerWelcome() {
   const banner = document.getElementById('ownerWelcome');
   if (!banner) return;
   banner.hidden = false;
+  const copyBtn = document.getElementById('ownerWelcomeCopy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => { copyOwnerUrl(copyBtn); });
+  }
   const dismissBtn = document.getElementById('ownerWelcomeDismiss');
   if (dismissBtn) {
     dismissBtn.addEventListener('click', () => { banner.hidden = true; });
@@ -142,6 +170,19 @@ export function initLock() {
 
   lockButton = document.getElementById('lockToggle');
   if (lockButton) lockButton.addEventListener('click', onLockToggleClick);
+
+  const ownerCopyBtn = document.getElementById('copyOwnerLink');
+  if (ownerCopyBtn) {
+    // Persistent copy-owner-link icon: visible only for owners, mirrors the
+    // welcome-banner copy button so the URL can always be re-copied after
+    // the address bar has been stripped.
+    ownerCopyBtn.hidden = !ctx.isOwner;
+    ownerCopyBtn.addEventListener('click', () => { copyOwnerUrl(null); });
+  }
+
+  // Remove the owner secret from the address bar. Cached secrets live in
+  // crypto.js + sessionStorage so reload-in-tab and decryption keep working.
+  if (ctx.isOwner) stripHashFromUrl();
 
   updateLockButtonUi();
   updateEditorAccess();

@@ -48,14 +48,85 @@ export function toB64(u8) {
  * Read the URL hash fragment and split it into the content-key segment and
  * the optional owner-secret segment (separated by a dot). Both segments are
  * base64url, which never contains a dot, so the split is unambiguous.
- * @returns {{keyB64: string, ownerSecretB64: string}}
+ *
+ * The hash is captured ONCE at module load and persisted to sessionStorage,
+ * scoped by space id. That way `stripHashFromUrl()` can remove the secrets
+ * from the address bar without breaking subsequent reads or page reloads in
+ * the same tab.
  */
+const SPACE_ID_FOR_KEYS = String((typeof window !== 'undefined' && window.SPACE_ID) || '').trim().toLowerCase();
+const KEYS_STORAGE_KEY = SPACE_ID_FOR_KEYS ? ('mz_keys_' + SPACE_ID_FOR_KEYS) : '';
+
+let cachedKeyB64 = '';
+let cachedOwnerSecretB64 = '';
+
+(function captureKeysFromHashOrStorage() {
+  let raw = (typeof window !== 'undefined' && window.location.hash || '').replace(/^#/, '');
+  if (!raw && KEYS_STORAGE_KEY) {
+    try { raw = sessionStorage.getItem(KEYS_STORAGE_KEY) || ''; } catch (e) {}
+  }
+  if (!raw) return;
+  const dot = raw.indexOf('.');
+  if (dot < 0) {
+    cachedKeyB64 = raw;
+  } else {
+    cachedKeyB64 = raw.slice(0, dot);
+    cachedOwnerSecretB64 = raw.slice(dot + 1);
+  }
+  if (KEYS_STORAGE_KEY) {
+    try { sessionStorage.setItem(KEYS_STORAGE_KEY, raw); } catch (e) {}
+  }
+})();
+
 function readHashSegments() {
-  const h = (window.location.hash || '').replace(/^#/, '');
-  if (!h) return { keyB64: '', ownerSecretB64: '' };
-  const dot = h.indexOf('.');
-  if (dot < 0) return { keyB64: h, ownerSecretB64: '' };
-  return { keyB64: h.slice(0, dot), ownerSecretB64: h.slice(dot + 1) };
+  return { keyB64: cachedKeyB64, ownerSecretB64: cachedOwnerSecretB64 };
+}
+
+/**
+ * Replace the address bar with the same path/query but without the hash, so
+ * the owner secret no longer appears in the URL. Only fires when an owner
+ * secret is actually present — reader URLs stay shareable.
+ */
+export function stripHashFromUrl() {
+  if (!cachedOwnerSecretB64) return;
+  if (typeof window === 'undefined' || !window.history) return;
+  try {
+    const url = window.location.pathname + window.location.search;
+    window.history.replaceState(null, '', url);
+  } catch (e) {}
+}
+
+/**
+ * Reconstruct the full owner URL from the cached key segments. Returns an
+ * empty string when no owner secret is available.
+ * @returns {string}
+ */
+export function getOwnerLinkUrl() {
+  if (!cachedKeyB64 || !cachedOwnerSecretB64) return '';
+  try {
+    const url = new URL(window.location.href);
+    url.hash = cachedKeyB64 + '.' + cachedOwnerSecretB64;
+    return url.toString();
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * Reconstruct the reader URL (content key only, no owner secret) from the
+ * cached key segments. Used by the Teilen/QR modal so the owner cannot
+ * accidentally share their own write credential.
+ * @returns {string}
+ */
+export function getReaderLinkUrl() {
+  if (!cachedKeyB64) return '';
+  try {
+    const url = new URL(window.location.href);
+    url.hash = cachedKeyB64;
+    return url.toString();
+  } catch (e) {
+    return '';
+  }
 }
 
 /**

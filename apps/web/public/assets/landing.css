@@ -162,6 +162,11 @@ a{color:#dbeafe;text-decoration:none}
 .hero-form .btn.primary{
   white-space:nowrap;
 }
+.hero-lock-line{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
 .hero-lock-toggle{
   display:inline-flex;
   align-items:center;
@@ -173,7 +178,7 @@ a{color:#dbeafe;text-decoration:none}
   transition:opacity .15s ease;
 }
 .hero-lock-toggle:hover,
-.hero-lock-toggle:has(input:checked){
+.hero-lock-line:has(input:checked) .hero-lock-toggle{
   opacity:.9;
 }
 .hero-lock-toggle input[type=checkbox]{
@@ -182,6 +187,52 @@ a{color:#dbeafe;text-decoration:none}
   height:14px;
   margin:0;
 }
+.hero-lock-info{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  cursor:help;
+  opacity:.5;
+  outline:none;
+}
+.hero-lock-info:hover,
+.hero-lock-info:focus{ opacity:.9; }
+.hero-lock-info svg{
+  width:16px;
+  height:16px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.5;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.hero-lock-info::after{
+  content:attr(data-tip);
+  position:absolute;
+  bottom:calc(100% + 8px);
+  left:50%;
+  transform:translateX(-50%);
+  white-space:normal;
+  width:260px;
+  padding:8px 10px;
+  background:#0f1620;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;
+  font-size:.74rem;
+  line-height:1.4;
+  text-align:left;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .15s ease;
+  z-index:10;
+  box-shadow:0 4px 18px rgba(0,0,0,.4);
+}
+.hero-lock-info:hover::after,
+.hero-lock-info:focus::after{ opacity:1; }
 .hero-lock-hint{
   margin:0;
   font-size:.74rem;

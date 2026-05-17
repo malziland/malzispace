@@ -138,15 +138,32 @@ async function main() {
     if (!lockBox) throw new Error('lockOnCreate checkbox missing on landing page');
     await ownerPage.check('#lockOnCreate');
 
+    // Capture the initial owner URL BEFORE the page can run init (which calls
+    // stripHashFromUrl). The framenavigated event fires while the URL still
+    // has the hash intact.
+    let initialOwnerUrl = '';
+    ownerPage.on('framenavigated', (frame) => {
+      if (frame === ownerPage.mainFrame() && !initialOwnerUrl) {
+        const url = frame.url();
+        if (/\/space\.html/.test(url) && url.indexOf('#') >= 0) initialOwnerUrl = url;
+      }
+    });
     await Promise.all([
       ownerPage.waitForURL(/\/space\.html/i, { timeout: 15_000 }),
       ownerPage.click('#createForm button[type=submit]')
     ]);
 
-    const ownerUrl = ownerPage.url();
-    const hash = new URL(ownerUrl).hash || '';
+    if (!initialOwnerUrl) initialOwnerUrl = ownerPage.url();
+    const hash = new URL(initialOwnerUrl).hash || '';
     if (!hash.includes('.')) throw new Error('owner URL hash does not contain owner-secret separator');
     pass(`PASS owner_url_format - hash has dot separator (len=${hash.length})`);
+
+    // After init the owner secret must be wiped from the address bar but the
+    // cached keys + sessionStorage backup keep decryption working.
+    await waitFor(async () => {
+      return ownerPage.evaluate(() => !window.location.hash);
+    }, { timeoutMs: 8000, label: 'owner URL hash stripped from address bar' });
+    pass('PASS owner_url_stripped - address bar no longer exposes the owner secret');
 
     // Wait for the editor to become editable for the owner.
     await waitFor(() => isEditorEditable(ownerPage), { timeoutMs: 15_000, label: 'owner editor editable' });
@@ -170,7 +187,7 @@ async function main() {
     // -- Page B: reader -----------------------------------------------------
     const dot = hash.indexOf('.');
     const readerHash = hash.slice(0, dot);
-    const readerUrl = ownerUrl.slice(0, ownerUrl.length - hash.length) + readerHash;
+    const readerUrl = initialOwnerUrl.slice(0, initialOwnerUrl.length - hash.length) + readerHash;
 
     const readerContext = await browser.newContext();
     await applyTestHarness(readerContext, stack.relayUrl);

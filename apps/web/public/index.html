@@ -35,10 +35,15 @@
           <input type="text" id="mzWebsite" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" class="hp-field" />
           <button type="submit" class="btn primary" data-i18n="landing.form.submit">Neuen Space erstellen</button>
         </div>
-        <label class="hero-lock-toggle">
-          <input type="checkbox" id="lockOnCreate" />
-          <span data-i18n="landing.lock.label">Mit Sperre erstellen</span>
-        </label>
+        <div class="hero-lock-line">
+          <label class="hero-lock-toggle">
+            <input type="checkbox" id="lockOnCreate" />
+            <span data-i18n="landing.lock.label">Mit Sperre erstellen</span>
+          </label>
+          <span class="hero-lock-info" tabindex="0" aria-label="Was bedeutet das?" data-i18n-aria-label="landing.lock.infoAria" data-i18n-tip="landing.lock.info" data-tip="Nur du als Ersteller kannst schreiben oder die Sperre wieder öffnen. Du bekommst dazu einen Owner-Link, den du wie ein Passwort behandeln solltest – ohne ihn bleibt der Space dauerhaft gesperrt.">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.01M12 11v5.5"/></svg>
+          </span>
+        </div>
         <p class="hero-lock-hint" id="lockOnCreateHint" hidden data-i18n="landing.lock.hint">Du bekommst zusätzlich einen Owner-Link. Bewahre ihn wie ein Passwort auf – ohne ihn bleibt der Space dauerhaft gesperrt.</p>
       </form>
     </header>

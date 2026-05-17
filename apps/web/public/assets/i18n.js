@@ -20,6 +20,8 @@
       'space.button.copyQrLink': 'Link kopieren',
       'space.button.close': 'Schließen',
       'landing.lock.label': 'Mit Sperre erstellen',
+      'landing.lock.info': 'Nur du als Ersteller kannst schreiben oder die Sperre wieder öffnen. Du bekommst dazu einen Owner-Link, den du wie ein Passwort behandeln solltest – ohne ihn bleibt der Space dauerhaft gesperrt.',
+      'landing.lock.infoAria': 'Was bedeutet „Mit Sperre erstellen"?',
       'landing.lock.hint': 'Du bekommst zusätzlich einen Owner-Link. Bewahre ihn wie ein Passwort auf – ohne ihn bleibt der Space dauerhaft gesperrt.',
       'space.lock.locked': 'Gesperrt – nur Owner darf schreiben',
       'space.lock.unlocked': 'Offen – jeder mit Link darf schreiben',
@@ -27,7 +29,10 @@
       'space.lock.toggleLocked': 'Space entsperren',
       'space.lock.toggleUnlocked': 'Space sperren',
       'space.lock.error': 'Sperre konnte nicht geändert werden',
-      'owner.welcome.text': 'Du bist Owner – bewahre die Browser-URL wie ein Passwort. Mit „Teilen" gibst du den Lese-Link weiter.',
+      'owner.welcome.text': 'Du bist Owner. Sichere dir jetzt den Owner-Link – die Adresszeile zeigt ihn gleich nicht mehr.',
+      'owner.welcome.copy': 'Owner-Link kopieren',
+      'owner.welcome.copied': 'Kopiert ✔',
+      'space.owner.copyLink': 'Owner-Link kopieren',
       'space.expired.notice': 'Dieser Space ist abgelaufen und wurde nach 24 Stunden automatisch gelöscht.',
       'space.expired.back': 'Zur Startseite',
       'space.editor.placeholder': 'Text hier einfügen …',
@@ -111,6 +116,8 @@
       'space.button.copyQrLink': 'Copy link',
       'space.button.close': 'Close',
       'landing.lock.label': 'Create with lock',
+      'landing.lock.info': 'Only you as the creator can write or unlock the space. You also get an owner link – treat it like a password, because without it the space stays locked forever.',
+      'landing.lock.infoAria': 'What does "Create with lock" mean?',
       'landing.lock.hint': 'You also get an owner link. Keep it like a password — without it, the space stays locked forever.',
       'space.lock.locked': 'Locked — only the owner can write',
       'space.lock.unlocked': 'Open — anyone with the link can write',
@@ -118,7 +125,10 @@
       'space.lock.toggleLocked': 'Unlock space',
       'space.lock.toggleUnlocked': 'Lock space',
       'space.lock.error': 'Could not change lock state',
-      'owner.welcome.text': 'You are the owner — treat the browser URL like a password. Use "Share" to hand out the read-only link.',
+      'owner.welcome.text': 'You are the owner. Save the owner link now – the address bar will hide it shortly.',
+      'owner.welcome.copy': 'Copy owner link',
+      'owner.welcome.copied': 'Copied ✔',
+      'space.owner.copyLink': 'Copy owner link',
       'space.expired.notice': 'This space has expired and was deleted automatically after 24 hours.',
       'space.expired.back': 'Back to homepage',
       'space.editor.placeholder': 'Paste text here …',
@@ -256,6 +266,9 @@
     });
     root.querySelectorAll('[data-i18n-data-label]').forEach((el) => {
       el.setAttribute('data-label', t(el.getAttribute('data-i18n-data-label')));
+    });
+    root.querySelectorAll('[data-i18n-tip]').forEach((el) => {
+      el.setAttribute('data-tip', t(el.getAttribute('data-i18n-tip')));
     });
   }
 

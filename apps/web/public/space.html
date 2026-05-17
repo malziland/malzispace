@@ -30,9 +30,12 @@
         <span id="titleLabel" class="title-label" hidden data-i18n="space.title.label">Titel</span>
         <span id="titleView" class="title" hidden></span>
         <div class="toolbar-actions">
-          <button id="lockToggle" class="btn icon-only lock-toggle" type="button" hidden data-state="open" aria-label="Space sperren" data-i18n-aria-label="space.lock.toggleUnlocked" title="Space sperren" data-i18n-title="space.lock.toggleUnlocked">
-            <svg class="lock-icon lock-icon--closed" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-            <svg class="lock-icon lock-icon--open" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.9-1"/></svg>
+          <button id="copyOwnerLink" class="icon-action" type="button" hidden aria-label="Owner-Link kopieren" data-i18n-aria-label="space.owner.copyLink" title="Owner-Link kopieren" data-i18n-title="space.owner.copyLink">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+          <button id="lockToggle" class="icon-action lock-toggle" type="button" hidden data-state="open" aria-label="Space sperren" data-i18n-aria-label="space.lock.toggleUnlocked" title="Space sperren" data-i18n-title="space.lock.toggleUnlocked">
+            <svg class="lock-icon lock-icon--closed" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none"/></svg>
+            <svg class="lock-icon lock-icon--open" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.9-1" fill="none"/></svg>
           </button>
           <button id="showQr" class="btn" type="button" data-i18n="space.button.share">Teilen</button>
         </div>
@@ -47,7 +50,8 @@
     </div>
 
     <div id="ownerWelcome" class="owner-welcome" hidden role="status">
-      <span class="owner-welcome-text" data-i18n="owner.welcome.text">Du bist Owner – bewahre die Browser-URL wie ein Passwort. Mit „Teilen" gibst du den Lese-Link weiter.</span>
+      <span class="owner-welcome-text" data-i18n="owner.welcome.text">Du bist Owner. Sichere dir jetzt den Owner-Link – die Adresszeile zeigt ihn gleich nicht mehr.</span>
+      <button id="ownerWelcomeCopy" type="button" class="owner-welcome-copy btn" data-i18n="owner.welcome.copy">Owner-Link kopieren</button>
       <button id="ownerWelcomeDismiss" type="button" class="owner-welcome-close" aria-label="Schließen" data-i18n-aria-label="modal.close">×</button>
     </div>
 

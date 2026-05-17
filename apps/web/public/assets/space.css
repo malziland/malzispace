@@ -52,16 +52,23 @@ footer.center{ text-align:center; margin-top:18px; }
   gap: 8px;
   flex-wrap: wrap;
 }
-.btn.icon-only{
-  padding: 6px 10px;
-  min-width: auto;
+.icon-action{
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  color: rgba(255,255,255,.75);
+  transition: color .15s ease, opacity .15s ease, transform .1s ease;
 }
-.lock-toggle .lock-icon{
-  width: 18px;
-  height: 18px;
+.icon-action:hover{ color: #fff; }
+.icon-action:active{ transform: scale(.96); }
+.icon-action svg{
+  width: 24px;
+  height: 24px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.75;
@@ -72,10 +79,21 @@ footer.center{ text-align:center; margin-top:18px; }
 .lock-toggle .lock-icon--closed{ display: inline-block; }
 .lock-toggle[data-state="open"] .lock-icon--closed{ display: none; }
 .lock-toggle[data-state="open"] .lock-icon--open{ display: inline-block; }
+/* Color the whole padlock by filling the body rect; the shackle stays
+   stroke-only so the lock vs unlock state remains readable at a glance. */
+.lock-toggle[data-state="locked"],
 .lock-toggle[data-state="readonly"]{
-  opacity: .55;
-  cursor: default;
+  color: #ef4444;
 }
+.lock-toggle[data-state="open"]{
+  color: #22c55e;
+}
+.lock-toggle .lock-icon rect{ fill: currentColor; stroke: currentColor; }
+.lock-toggle[data-state="readonly"]{
+  cursor: default;
+  pointer-events: none;
+}
+.lock-toggle[data-state="readonly"]:hover{ color: #ef4444; }
 body.is-readonly #editor{
   background: rgba(0,0,0,.02);
 }
@@ -94,7 +112,12 @@ body.is-readonly #editorToolbar [data-action]{
   opacity: .75;
   border-left: 2px solid var(--accent);
 }
-.owner-welcome-text{ flex: 1; line-height: 1.4; }
+.owner-welcome-text{ flex: 1; line-height: 1.4; min-width: 0; }
+.owner-welcome-copy{
+  padding: 4px 10px;
+  font-size: .8rem;
+  white-space: nowrap;
+}
 .owner-welcome-close{
   background: transparent;
   border: 0;
