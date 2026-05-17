@@ -23,6 +23,20 @@ function setBodyReadOnly(readOnly) {
   } catch (e) {}
 }
 
+function setBodyUiClasses() {
+  // The space.css selectors `body:not(.has-lock-ui) #lockToggle` and
+  // `body:not(.has-owner-ui) #copyOwnerLink` default both controls to
+  // display:none. JS adds the matching class only when the conditions
+  // for showing each control are met. This eliminates any reliance on
+  // the HTML `hidden` attribute interacting cleanly with our CSS rules.
+  try {
+    const body = document.body;
+    const showLock = !!ctx.hasOwner && (!!ctx.isOwner || !!ctx.readOnly);
+    body.classList.toggle('has-lock-ui', showLock);
+    body.classList.toggle('has-owner-ui', !!ctx.isOwner);
+  } catch (e) {}
+}
+
 function updateLockButtonUi() {
   if (!lockButton) return;
   const readOnly = !!ctx.readOnly;
@@ -121,6 +135,7 @@ function maybeShowOwnerWelcome() {
 export function applyLockState({ readOnly, hasOwner } = {}) {
   if (typeof readOnly === 'boolean') ctx.readOnly = readOnly;
   if (typeof hasOwner === 'boolean') ctx.hasOwner = hasOwner;
+  setBodyUiClasses();
   updateLockButtonUi();
   updateEditorAccess();
   maybeShowOwnerWelcome();
@@ -184,6 +199,7 @@ export function initLock() {
   // crypto.js + sessionStorage so reload-in-tab and decryption keep working.
   if (ctx.isOwner) stripHashFromUrl();
 
+  setBodyUiClasses();
   updateLockButtonUi();
   updateEditorAccess();
 }

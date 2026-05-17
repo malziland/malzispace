@@ -56,6 +56,12 @@ footer.center{ text-align:center; margin-top:18px; }
    browser-default `[hidden] { display: none }` rule, leaving the JS-driven
    visibility toggle silently broken. Re-assert hidden globally. */
 [hidden]{ display: none !important; }
+/* Defence in depth: the lock toggle and the owner-link copy button default
+   to hidden in CSS and only become visible when JS explicitly grants them
+   the relevant body-class state. This way a stray CSS rule (or a stale
+   build) cannot expose the owner-link copy button to readers. */
+body:not(.has-lock-ui) #lockToggle,
+body:not(.has-owner-ui) #copyOwnerLink { display: none !important; }
 .icon-action{
   display: inline-flex;
   align-items: center;
