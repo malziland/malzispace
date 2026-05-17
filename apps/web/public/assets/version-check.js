@@ -12,6 +12,16 @@
 (function () {
   'use strict';
 
+  // bf-cache restoration brings a page back from memory in its previous DOM
+  // and JS state — `Cache-Control: no-store` does not prevent this on
+  // Chromium/WebKit. Force a fresh reload whenever the page is shown from
+  // bf-cache so users never see a stale build after a deploy.
+  window.addEventListener('pageshow', (event) => {
+    if (event && event.persisted) {
+      try { window.location.reload(); } catch (e) {}
+    }
+  });
+
   const POLL_MS = 60_000;
   const APP_ATTR = /<script[^>]+src="([^"]*assets\/modules\/app\.[a-f0-9]+\.js)"/i;
 

@@ -40,4 +40,16 @@
   window.addEventListener('hashchange', () => {
     try { window.location.reload(); } catch (e) {}
   });
+
+  // Back/forward cache (bf-cache) restores the page in its previous DOM +
+  // JS state without re-running scripts — `Cache-Control: no-store` alone
+  // does NOT prevent this on modern Chromium/WebKit. After a deploy, the
+  // restored tab keeps showing the old code. Detect bf-cache restoration
+  // via `pageshow.persisted` and force a fresh reload so the running
+  // bundle matches what the server now serves.
+  window.addEventListener('pageshow', (event) => {
+    if (event && event.persisted) {
+      try { window.location.reload(); } catch (e) {}
+    }
+  });
 })();
