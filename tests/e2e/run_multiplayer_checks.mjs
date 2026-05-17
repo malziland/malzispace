@@ -57,7 +57,7 @@ async function createSpaceUrl() {
   const create = await api('/api/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'multiplayer-check', key_proof: keyProof })
+    body: JSON.stringify({ key_proof: keyProof })
   });
   if (create.status !== 200 || !create.json || !create.json.ok || !create.json.id) {
     throw new Error(`create failed: status=${create.status} body=${JSON.stringify(create.json)}`);

@@ -63,7 +63,7 @@ async function main() {
   const create = await api('/api/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'smoke', key_proof: keyProof })
+    body: JSON.stringify({ key_proof: keyProof })
   });
   assert(create.status === 200, `create status=${create.status}`);
   assert(create.json && create.json.ok && create.json.id, `create response=${JSON.stringify(create.json)}`);
@@ -84,7 +84,6 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       id,
-      title: 'smoke',
       version: load1.json.version,
       zk: true,
       key_proof: keyProof,

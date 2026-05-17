@@ -186,27 +186,26 @@ export async function encryptTitle(plainTitle) {
 }
 
 /**
- * Decrypt a title from encrypted fields, with plaintext fallback for legacy spaces.
- * @param {object} doc - Object with optional title_enc, title_nonce, and title fields.
- * @returns {Promise<string>} The decrypted or plaintext title.
+ * Decrypt a title from encrypted fields. Returns empty string if no encrypted
+ * title is present or decryption fails — the server never stores plaintext.
+ * @param {object} doc - Object with optional title_enc and title_nonce.
+ * @returns {Promise<string>} The decrypted title or empty string.
  */
 export async function decryptTitle(doc) {
   if (!doc) return '';
   const nonceB64 = doc.title_nonce || '';
   const cipherB64 = doc.title_enc || '';
-  if (nonceB64 && cipherB64) {
-    const key = await importKey();
-    if (!key) return doc.title || '';
-    try {
-      const iv = fromB64(nonceB64);
-      const cipher = fromB64(cipherB64);
-      const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
-      return new TextDecoder().decode(new Uint8Array(buf));
-    } catch (e) {
-      return doc.title || '';
-    }
+  if (!nonceB64 || !cipherB64) return '';
+  const key = await importKey();
+  if (!key) return '';
+  try {
+    const iv = fromB64(nonceB64);
+    const cipher = fromB64(cipherB64);
+    const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+    return new TextDecoder().decode(new Uint8Array(buf));
+  } catch (e) {
+    return '';
   }
-  return doc.title || '';
 }
 
 /**

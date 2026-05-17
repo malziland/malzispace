@@ -76,7 +76,7 @@
         }
       } catch (e) {}
 
-      let titlePayload = { title: '' };
+      let titlePayload = {};
       if (title) {
         const cryptoKey = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
         const iv = crypto.getRandomValues(new Uint8Array(12));

@@ -54,7 +54,7 @@ async function createSpace(keyProof) {
   const res = await api('/api/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'Load test', key_proof: keyProof })
+    body: JSON.stringify({ key_proof: keyProof })
   });
   if (res.json.error || !res.json.id) {
     throw new Error(`create failed: ${JSON.stringify(res.json)}`);
@@ -133,7 +133,6 @@ async function main() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: spaceId,
-              title: 'Load test',
               version: s.version,
               zk: true,
               key_proof: keyProof,

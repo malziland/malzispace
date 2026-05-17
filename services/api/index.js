@@ -371,10 +371,14 @@ router.post('/create', async (req, res) => {
 
     const body = req.body || {};
     if (body.website) return sendJson(res, 400, { error: 'invalid_request' }); // honeypot
+    // Zero-Knowledge: plaintext titles are not accepted. Reject explicitly so a
+    // client mistake cannot leak a title into Firestore.
+    if (Object.prototype.hasOwnProperty.call(body, 'title')) {
+      return sendJson(res, 400, { error: 'plaintext_title_not_allowed' });
+    }
     const titleEnc = String(body.title_enc || '');
     const titleNonce = String(body.title_nonce || '');
     const titleAlgo = String(body.title_algo || '');
-    const titlePlain = String(body.title || '').trim().slice(0, 80);
     if (titleEnc) {
       if (titleEnc.length > 10_000) return sendJson(res, 413, { error: 'payload_too_large' });
       if (!B64URL_RE.test(titleEnc) || !B64URL_RE.test(titleNonce))
@@ -393,7 +397,6 @@ router.post('/create', async (req, res) => {
       try {
         await ref.create({
           id,
-          title: titleEnc ? '' : titlePlain,
           title_enc: titleEnc || null,
           title_nonce: titleNonce || null,
           title_algo: titleAlgo || null,
@@ -445,7 +448,6 @@ router.get('/load', async (req, res) => {
 
     const out = {
       id,
-      title: data.title || '',
       title_enc: data.title_enc || null,
       title_nonce: data.title_nonce || null,
       title_algo: data.title_algo || null,
@@ -477,10 +479,13 @@ router.post('/save', async (req, res) => {
     if (!ID_RE.test(id)) return sendJson(res, 400, { error: 'invalid_id' });
     const ip = getClientIp(req);
 
+    // Zero-Knowledge: plaintext titles are not accepted.
+    if (Object.prototype.hasOwnProperty.call(body, 'title')) {
+      return sendJson(res, 400, { error: 'plaintext_title_not_allowed' });
+    }
     const titleEnc = String(body.title_enc || '');
     const titleNonce = String(body.title_nonce || '');
     const titleAlgo = String(body.title_algo || '');
-    const titlePlain = String(body.title || '').trim().slice(0, 80);
     if (titleEnc) {
       if (titleEnc.length > 10_000) return sendJson(res, 413, { error: 'payload_too_large' });
       if (!B64URL_RE.test(titleEnc) || !B64URL_RE.test(titleNonce))
@@ -513,7 +518,7 @@ router.post('/save', async (req, res) => {
       if (encTag.length > 128) return sendJson(res, 413, { error: 'payload_too_large' });
       if (!B64URL_RE.test(encTag)) return sendJson(res, 400, { error: 'invalid_payload_encoding' });
     }
-    const payloadCost = estimatePayloadBudgetCost([titlePlain, titleEnc, titleNonce, titleAlgo, encCipher, encNonce, encAlgo, encTag]);
+    const payloadCost = estimatePayloadBudgetCost([titleEnc, titleNonce, titleAlgo, encCipher, encNonce, encAlgo, encTag]);
     if (!rateLimitMany(res, [
       { limiter: RL_SAVE_IP, key: `save_ip:${ip}` },
       { limiter: RL_SAVE, key: `save:${ip}:${id}` },
@@ -533,7 +538,6 @@ router.post('/save', async (req, res) => {
       const newVersion = serverVersion + 1;
 
       const update = {
-        title: titleEnc ? '' : titlePlain,
         title_enc: titleEnc || null,
         title_nonce: titleNonce || null,
         title_algo: titleAlgo || null,
@@ -579,10 +583,13 @@ router.post('/title', async (req, res) => {
       { limiter: RL_TITLE, key: `title:${ip}:${id}` }
     ])) return;
 
+    // Zero-Knowledge: plaintext titles are not accepted.
+    if (Object.prototype.hasOwnProperty.call(body, 'title')) {
+      return sendJson(res, 400, { error: 'plaintext_title_not_allowed' });
+    }
     const titleEnc = String(body.title_enc || '');
     const titleNonce = String(body.title_nonce || '');
     const titleAlgo = String(body.title_algo || '');
-    const titlePlain = String(body.title || '').trim().slice(0, 80);
     if (titleEnc) {
       if (titleEnc.length > 10_000) return sendJson(res, 413, { error: 'payload_too_large' });
       if (!B64URL_RE.test(titleEnc) || !B64URL_RE.test(titleNonce))
@@ -600,7 +607,6 @@ router.post('/title', async (req, res) => {
       if (!isWriteAuthorized(data, keyProof)) throw Object.assign(new Error('forbidden_no_key'), { code: 'forbidden_no_key' });
       const serverVersion = Number.isFinite(data.version) ? data.version : 0;
       tx.update(ref, {
-        title: titleEnc ? '' : titlePlain,
         title_enc: titleEnc || null,
         title_nonce: titleNonce || null,
         title_algo: titleAlgo || null,

@@ -376,8 +376,6 @@ export async function saveNow() {
         body.title_enc = titleEncResult.ciphertext;
         body.title_nonce = titleEncResult.nonce;
         body.title_algo = titleEncResult.algo;
-      } else {
-        body.title = '';
       }
       const res = await api('save', {
         method: 'POST',
