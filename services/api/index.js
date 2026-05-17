@@ -535,6 +535,9 @@ router.post('/save', async (req, res) => {
       if (!data.zk) return { error: 'e2e_required' };
       if (!isWriteAuthorized(data, keyProof)) return { error: 'forbidden_no_key' };
       const serverVersion = Number.isFinite(data.version) ? data.version : 0;
+      if (clientVersion !== serverVersion) {
+        return { error: 'version_conflict', serverVersion };
+      }
       const newVersion = serverVersion + 1;
 
       const update = {
@@ -554,17 +557,16 @@ router.post('/save', async (req, res) => {
 
       tx.update(ref, update);
 
-      return {
-        ok: true,
-        version: newVersion,
-        conflict: clientVersion !== serverVersion
-      };
+      return { ok: true, version: newVersion };
     });
 
     if (result && result.error === 'not_found') return sendJson(res, 404, { error: 'not_found' });
     if (result && result.error === 'expired') return sendJson(res, 410, { error: 'expired' });
     if (result && result.error === 'e2e_required') return sendJson(res, 403, { error: 'e2e_required' });
     if (result && result.error === 'forbidden_no_key') return sendJson(res, 403, { error: 'forbidden_no_key' });
+    if (result && result.error === 'version_conflict') {
+      return sendJson(res, 409, { error: 'version_conflict', server_version: result.serverVersion });
+    }
     return sendJson(res, 200, result);
   } catch (err) {
     console.error('save error', err?.code || err?.message);

@@ -24,9 +24,10 @@ All client-side feature flags are defined in `apps/web/public/assets/config.js`.
 
 Current flags:
 
-- `enableCrdt`
 - `enableWs`
 - `enablePresence`
+
+The `enableCrdt` flag is internal only (no URL override). Production always uses the Yjs/CRDT sync path; the editor simulator overrides `window.MZ_FLAGS.enableCrdt=false` to drive its localStorage-mocked legacy path.
 
 How to add a new flag safely:
 

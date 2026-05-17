@@ -259,9 +259,10 @@ Feature Flags leben in `apps/web/public/assets/config.js` und koennen per URL-Pa
 
 | Flag | Default | URL-Parameter | Beschreibung |
 |------|---------|---------------|--------------|
-| `enableCrdt` | `true` | `?ff_enableCrdt=0` | Yjs CRDT-Unterstuetzung |
 | `enableWs` | `true` | `?ff_enableWs=0` | WebSocket-Sync |
 | `enablePresence` | `true` | `?ff_enablePresence=0` | Echtzeit-Praesenz |
+
+Die Yjs-CRDT-Synchronisation ist immer aktiv und kann nicht per URL-Parameter deaktiviert werden — sie ist der einzige Speicherpfad fuer Inhalte.
 
 Beispiel:
 ```

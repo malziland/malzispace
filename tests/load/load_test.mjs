@@ -143,8 +143,10 @@ async function main() {
           });
           if (res.json && !res.json.error) {
             s.writes += 1;
-            if (res.json.conflict) s.conflicts += 1;
             if (Number.isFinite(res.json.version)) s.version = res.json.version;
+          } else if (res.json && res.json.error === 'version_conflict') {
+            s.conflicts += 1;
+            if (Number.isFinite(res.json.server_version)) s.version = res.json.server_version;
           } else {
             s.errors += 1;
           }

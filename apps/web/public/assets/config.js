@@ -33,16 +33,23 @@
   window.MZ_COLLAB_WS_URL = collabWsUrl;
 
   // Client feature flags (server still enforces App Check + expiry).
-  const defaults = {
-    enableCrdt: true,
+  // User-controllable via URL params (?ff_<name>=0|1):
+  const urlControllable = {
     enableWs: true,
     enablePresence: true
   };
 
-  const flags = Object.assign({}, defaults, (window.MZ_FLAGS && typeof window.MZ_FLAGS === 'object') ? window.MZ_FLAGS : {});
+  // Internal-only flag: production always uses the Yjs/CRDT sync path.
+  // The editor simulator sets window.MZ_FLAGS.enableCrdt=false before this
+  // script runs to fall back to the legacy save path it can intercept; URL
+  // params cannot toggle it from the outside.
+  const preset = (window.MZ_FLAGS && typeof window.MZ_FLAGS === 'object') ? window.MZ_FLAGS : {};
+  const flags = Object.assign({}, urlControllable, preset);
+  flags.enableCrdt = preset.enableCrdt !== false;
+
   try {
     const params = new URLSearchParams(window.location.search);
-    for (const k of Object.keys(defaults)) {
+    for (const k of Object.keys(urlControllable)) {
       const v = params.get('ff_' + k);
       if (v === '0') flags[k] = false;
       if (v === '1') flags[k] = true;
