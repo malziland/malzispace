@@ -322,6 +322,15 @@ router.post('/appcheck/token', async (req, res) => {
     const ip = getClientIp(req);
     if (!rateLimit(res, RL_APPCHECK_TOKEN, `appcheck_token:${ip}`)) return;
 
+    // App Check token minting is the bootstrap step that grants access to all
+    // other endpoints, so we hold it to a stricter origin policy than the
+    // rest of the API. Modern browsers always include Origin on POST, so a
+    // missing Origin here means a script-only client trying to mint tokens
+    // without ever loading the site.
+    if (!req.header('Origin')) {
+      return sendJson(res, 403, { error: 'origin_required' });
+    }
+
     const appId = String(req.body && req.body.app_id || '').trim();
     const challengeId = String(req.body && req.body.challenge_id || '').trim();
     const nonce = normalizeNonce(req.body && req.body.nonce);
