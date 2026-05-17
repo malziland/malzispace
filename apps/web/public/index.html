@@ -30,14 +30,16 @@
       <h1 class="hero-headline" data-i18n="landing.hero.title">paste. share. done.</h1>
       <p class="hero-sub" data-i18n="landing.hero.subtitle">Teile Text in Sekunden &ndash; verschl&uuml;sselt, ohne Login, automatisch gel&ouml;scht.</p>
       <form id="createForm" class="hero-form">
-        <input type="text" id="spaceTitle" maxlength="80" placeholder="Titel (optional)" data-i18n-placeholder="landing.form.placeholder" />
-        <input type="text" id="mzWebsite" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" class="hp-field" />
+        <div class="hero-form-row">
+          <input type="text" id="spaceTitle" maxlength="80" placeholder="Titel (optional)" data-i18n-placeholder="landing.form.placeholder" />
+          <input type="text" id="mzWebsite" name="website" autocomplete="off" tabindex="-1" aria-hidden="true" class="hp-field" />
+          <button type="submit" class="btn primary" data-i18n="landing.form.submit">Neuen Space erstellen</button>
+        </div>
         <label class="hero-lock-toggle">
           <input type="checkbox" id="lockOnCreate" />
-          <span data-i18n="landing.lock.label">Beim Erstellen sperren (nur du kannst entsperren)</span>
+          <span data-i18n="landing.lock.label">Mit Sperre erstellen</span>
         </label>
         <p class="hero-lock-hint" id="lockOnCreateHint" hidden data-i18n="landing.lock.hint">Du bekommst zusätzlich einen Owner-Link. Bewahre ihn wie ein Passwort auf – ohne ihn bleibt der Space dauerhaft gesperrt.</p>
-        <button type="submit" class="btn primary" data-i18n="landing.form.submit">Neuen Space erstellen</button>
       </form>
     </header>
     <section class="info" aria-labelledby="info-heading">
