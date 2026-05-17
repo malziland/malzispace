@@ -26,8 +26,26 @@ Diese Schritte helfen, dass keine fehlerhafte Version live geht.
 
    Wenn der Smoke-Test fehlschlägt: **nicht deployen**, sondern erst fixen.
 
-## Nach dem Release (kurz prüfen)
+## Nach dem Release
 
-1. Startseite öffnen, Space erstellen
-2. Text tippen, prüfen ob „Gespeichert“ erscheint
-3. Link in 2. Tab öffnen: Text/Presence soll funktionieren
+1. **Live-Gate gegen die Custom-Domain** (Standard):
+
+   ```bash
+   ./ops/verify_live.sh
+   ```
+
+   Schickt Smoke + Multiplayer gegen `https://malzi.space` mit
+   temporärem Debug-Token.
+
+2. **Live-Gate auch gegen das Firebase-Hosting-Default**:
+
+   ```bash
+   BASE_URL=https://malzispace.web.app ./ops/verify_live.sh
+   ```
+
+   So fällt auf, wenn die Custom-Domain TLS/CSP/Caching-spezifische
+   Probleme hat, die unter `*.web.app` nicht auftreten.
+
+3. **Manuelle Sichtkontrolle**: Startseite öffnen, Space erstellen,
+   Text tippen, „Gespeichert“ prüfen, Link in 2. Tab teilen, Text +
+   Presence prüfen.
