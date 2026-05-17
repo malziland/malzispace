@@ -260,9 +260,126 @@ async function main() {
     }, { timeoutMs: 8000, label: 'fresh-tab owner sees enabled lock with state=locked' });
     pass('PASS fresh_owner_tab - pasting owner URL in a new tab keeps full owner powers (lock stays locked)');
 
+    // -- Owner tab navigates to reader URL → must drop owner state ---------
+    // User scenario: in the owner tab, type/paste the reader URL into the
+    // address bar and reload. cached secrets must be replaced, not retained.
+    const ownerContext3 = await browser.newContext();
+    await applyTestHarness(ownerContext3, stack.relayUrl);
+    const ownerPage3 = await ownerContext3.newPage();
+    let initialOwnerUrl3 = '';
+    ownerPage3.on('framenavigated', (f) => {
+      if (f === ownerPage3.mainFrame() && !initialOwnerUrl3) {
+        const u = f.url();
+        if (/\/space\.html/.test(u) && u.indexOf('#') >= 0) initialOwnerUrl3 = u;
+      }
+    });
+    await ownerPage3.goto(`${stack.baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
+    await ownerPage3.check('#lockOnCreate');
+    await Promise.all([
+      ownerPage3.waitForURL(/\/space\.html/i, { timeout: 15_000 }),
+      ownerPage3.click('#createForm button[type=submit]')
+    ]);
+    await ownerPage3.waitForTimeout(3000); // let strip + sessionStorage write happen
+    const hash3 = new URL(initialOwnerUrl3 || ownerPage3.url()).hash;
+    const dot3 = hash3.indexOf('.');
+    const readerUrlForOwnerTab = (initialOwnerUrl3 || ownerPage3.url()).slice(0, -hash3.length) + hash3.slice(0, dot3);
+    // Two ways the user reaches this state: (a) type the reader URL and hit
+    // Enter (hash-only navigation, no automatic reload), or (b) the explicit
+    // Cmd+R afterwards. Our hashchange listener in space-bootstrap.js makes
+    // (a) trigger a real reload internally; (b) is covered for free. Use the
+    // hash-only path here so we cover the trickier (a) case.
+    await ownerPage3.goto(readerUrlForOwnerTab, { waitUntil: 'domcontentloaded' });
+    await ownerPage3.waitForTimeout(3500); // allow hashchange → reload → init
+    const afterPasteState = await ownerPage3.evaluate(() => {
+      const o = document.getElementById('copyOwnerLink');
+      const l = document.getElementById('lockToggle');
+      const editor = document.getElementById('editor');
+      let storedKeys = '';
+      try { storedKeys = sessionStorage.getItem('mz_keys_' + String(window.SPACE_ID || '')) || ''; } catch (e) {}
+      return {
+        url: window.location.href,
+        hash: window.location.hash,
+        sessionStorageKeys: storedKeys,
+        ownerHidden: o ? o.hasAttribute('hidden') : null,
+        ownerComputed: o ? getComputedStyle(o).display : null,
+        lockHidden: l ? l.hasAttribute('hidden') : null,
+        lockComputed: l ? getComputedStyle(l).display : null,
+        lockState: l ? l.getAttribute('data-state') : null,
+        editorEditable: editor ? editor.getAttribute('contenteditable') === 'true' : null
+      };
+    });
+    console.log('  diagnostic state:', JSON.stringify(afterPasteState));
+    if (afterPasteState.ownerComputed && afterPasteState.ownerComputed !== 'none') throw new Error('owner tab → reader URL: copyOwnerLink still visible');
+    if (afterPasteState.editorEditable) throw new Error('owner tab → reader URL: editor still editable (must be read-only)');
+    pass(`PASS owner_tab_to_reader - reader UI applied after reader-URL navigation`);
+
+    // -- Parallel owner + reader in the SAME browser context --------------
+    // User requirement: "es muss möglich sein im selben browser owner und
+    // teilnehmer parallel offen und funktional zu haben". sessionStorage is
+    // per-tab by HTML spec, so two independent tabs in the same context must
+    // run with independent owner/reader state.
+    const parallelCtx = await browser.newContext();
+    await applyTestHarness(parallelCtx, stack.relayUrl);
+    const pOwner = await parallelCtx.newPage();
+    let pOwnerInitialUrl = '';
+    pOwner.on('framenavigated', (f) => {
+      if (f === pOwner.mainFrame() && !pOwnerInitialUrl) {
+        const u = f.url();
+        if (/\/space\.html/.test(u) && u.indexOf('#') >= 0) pOwnerInitialUrl = u;
+      }
+    });
+    await pOwner.goto(`${stack.baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
+    await pOwner.check('#lockOnCreate');
+    await Promise.all([
+      pOwner.waitForURL(/\/space\.html/i, { timeout: 15_000 }),
+      pOwner.click('#createForm button[type=submit]')
+    ]);
+    if (!pOwnerInitialUrl) pOwnerInitialUrl = pOwner.url();
+    await pOwner.waitForTimeout(3000);
+
+    const pHash = new URL(pOwnerInitialUrl).hash;
+    const pDot = pHash.indexOf('.');
+    const pReaderUrl = pOwnerInitialUrl.slice(0, -pHash.length) + pHash.slice(0, pDot);
+    const pReader = await parallelCtx.newPage();
+    await pReader.goto(pReaderUrl, { waitUntil: 'domcontentloaded' });
+    await pReader.waitForSelector('#editor', { timeout: 10_000 });
+    await pReader.waitForTimeout(3000);
+
+    const ownerState = await pOwner.evaluate(() => {
+      const o = document.getElementById('copyOwnerLink');
+      const l = document.getElementById('lockToggle');
+      const editor = document.getElementById('editor');
+      return {
+        ownerVisible: o ? getComputedStyle(o).display !== 'none' : null,
+        lockState: l ? l.getAttribute('data-state') : null,
+        lockDisabled: l ? l.disabled : null,
+        editorEditable: editor ? editor.getAttribute('contenteditable') === 'true' : null
+      };
+    });
+    const readerState = await pReader.evaluate(() => {
+      const o = document.getElementById('copyOwnerLink');
+      const l = document.getElementById('lockToggle');
+      const editor = document.getElementById('editor');
+      return {
+        ownerVisible: o ? getComputedStyle(o).display !== 'none' : null,
+        lockState: l ? l.getAttribute('data-state') : null,
+        lockDisabled: l ? l.disabled : null,
+        editorEditable: editor ? editor.getAttribute('contenteditable') === 'true' : null
+      };
+    });
+    if (!ownerState.ownerVisible || ownerState.lockState !== 'locked' || ownerState.lockDisabled || !ownerState.editorEditable) {
+      throw new Error('parallel: owner tab regressed: ' + JSON.stringify(ownerState));
+    }
+    if (readerState.ownerVisible || readerState.lockState !== 'readonly' || !readerState.lockDisabled || readerState.editorEditable) {
+      throw new Error('parallel: reader tab regressed: ' + JSON.stringify(readerState));
+    }
+    pass('PASS parallel_owner_reader - both tabs functional in the same browser context');
+
     await ownerContext.close();
     await readerContext.close();
     await ownerContext2.close();
+    await ownerContext3.close();
+    await parallelCtx.close();
   } finally {
     if (browser) await browser.close().catch(() => {});
     await stack.stop();

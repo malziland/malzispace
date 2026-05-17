@@ -30,4 +30,14 @@
   }
 
   window.SPACE_ID = id;
+
+  // Hash-only navigation (typing a different URL with same path+query but
+  // a different hash) doesn't reload the page, so cached key material
+  // would silently stay in owner mode after a paste-of-reader-URL. We
+  // force a real reload whenever the hash changes after initial load.
+  // Note: history.replaceState() (our owner-URL strip) does NOT fire
+  // hashchange, so this is safe to install unconditionally.
+  window.addEventListener('hashchange', () => {
+    try { window.location.reload(); } catch (e) {}
+  });
 })();
