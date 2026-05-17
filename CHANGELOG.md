@@ -2,6 +2,116 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.2.1] - 2026-05-17
+
+Owner-Lock-Iteration nach Initial-1.2.0: UX-Politur, Owner-Link aus der
+Adresszeile heraus, Live-Race im Relay-Connect, robuste Cache-Hygiene
+gegen bf-cache und Browser-Tab-Restore.
+
+### Changed
+- LOCK-UI-01: Landingpage — die „Mit Sperre erstellen"-Checkbox sitzt
+  nicht mehr zwischen Titel-Input und Submit-Button. Eigene Zeile unter
+  dem Primary-Flow, dezenter, mit kleinem Info-Icon (ⓘ) das per
+  Hover/Fokus erklaert was die Sperre macht. Label gekuerzt.
+- LOCK-UI-02: Lock-Icon in der Space-Toolbar ist jetzt flach, 24px,
+  ohne Button-Rahmen. Body ist gefuellt — Rot fuer „gesperrt"
+  (sowohl fuer Owner als auch als Read-Only-Indikator fuer Reader),
+  Gruen fuer „offen" (nur Owner). Stil bleibt im Einklang mit den
+  uebrigen Toolbar-Icons (Stroke `currentColor`, kein Fill bei der
+  Schackel-Linie).
+- LOCK-UI-03: Owner-Link-Kopier-Button bekam eine sichtbare „Owner-Link"-
+  Beschriftung neben dem Clipboard-Icon plus rot getoenten Rand, damit
+  er sich klar vom Teilen-Button unterscheidet. Teilen-Button bekam
+  ein Share-Icon und ein eindeutiges `aria-label`/`title` „Lese-Link
+  teilen". User-Report war: bare Clipboard-Icon war zu generisch,
+  Teilen-Button schien dasselbe zu kopieren.
+- LOCK-UI-04: Owner-Welcome-Banner radikal abgespeckt — eine Zeile
+  mit Hinweis + „Owner-Link kopieren"-Button + dezenter `×`-Schliesser,
+  kein eingebettetes Read-only-Inputfeld mehr.
+
+### Added
+- PRIVACY-01: Owner-URL wird nicht mehr in der Adresszeile angezeigt.
+  `crypto.js` cached den Hash beim Module-Load in eine modul-lokale
+  Variable und in `sessionStorage["mz_keys_<id>"]`. Anschliessend
+  raeumt `history.replaceState` die `#<key>.<ownerSecret>`-Komponente
+  weg, ohne Decryption oder Reload-im-Tab zu brechen. Reader-URLs
+  bleiben unveraendert, weil sie shareable sein muessen.
+- PRIVACY-02: Persistenter „Owner-Link"-Button in der Toolbar ist
+  nur fuer Owner sichtbar und rekonstruiert die volle Owner-URL aus
+  den gecachten Schluesseln, wenn der Owner den Link erneut kopieren
+  will. Welcome-Banner spiegelt diesen Button fuer den Erst-Kontakt.
+- CACHE-01: HTML-Antworten kommen jetzt mit `Cache-Control: no-store,
+  no-cache, must-revalidate, max-age=0` — Browser cachen sie nicht
+  mehr zwischen Tab-Wechseln.
+- CACHE-02: Neue Datei `assets/version-check.js`. Pollt alle 60 s
+  (plus bei `visibilitychange`) die eigene Seite, vergleicht den
+  `app.<hash>.js`-Dateinamen mit dem geladenen Bundle und blendet bei
+  Mismatch unten mittig ein „Neue Version verfuegbar — Neu laden"-
+  Banner ein. So sehen Nutzer mit aelterem Tab den naechsten Deploy
+  ohne harten Refresh.
+- CACHE-03: `pageshow`-Listener in `space-bootstrap.js` und
+  `version-check.js`. Wird die Seite aus dem bf-cache restauriert
+  (`event.persisted === true`), erzwingt der Listener einen
+  `location.reload()`. `Cache-Control: no-store` allein verhindert
+  bf-cache-Speicherung auf modernen Chromium/WebKit-Browsern nicht.
+- CACHE-04: Neue Notfall-URL `https://malzi.space/reset-cache.html`.
+  Die Antwort traegt `Clear-Site-Data: "cache", "storage"` — der
+  Browser ist verpflichtet, Cache + lokalen Storage fuer die Origin
+  zu loeschen. Eine kleine Bestaetigungsseite plus „Zur Startseite"-
+  Link helfen Nutzern aus festgefahrenen Tab-Zustaenden raus, ohne
+  dass sie ihren globalen Browser-Cache opfern muessen.
+
+### Fixed
+- LOCK-FIX-01: `[hidden] { display: none !important }` global in
+  `space.css`. Vorher hatte die Klasse `.btn-with-icon` mit
+  `display: inline-flex` dieselbe Spezifitaet wie der Browser-Default
+  `[hidden] { display: none }` und gewann durch Quelltextreihenfolge.
+  Folge: `ownerCopyBtn.hidden = true` blieb visuell wirkungslos und
+  Reader sahen den Owner-Link-Button. Live verifiziert per Playwright
+  gegen Production.
+- LOCK-FIX-02: Hash-only-Navigation (Owner-Tab → Reader-URL in die
+  Adressleiste tippen, Enter) loest in Browsern keinen Reload aus.
+  Ohne Reload bleiben `cachedOwnerSecretB64` und `ctx.isOwner` im
+  Owner-Zustand. Neuer `hashchange`-Listener in space-bootstrap.js
+  ruft `window.location.reload()` — `history.replaceState` (unser
+  Owner-URL-Strip) loest kein hashchange aus, also keine
+  Reload-Schleife.
+- LOCK-FIX-03: Relay-`attachRoomState` initialisierte den raum-
+  internen `readOnly`-State auf `false` und ueberliess das Update
+  dem asynchronen Firestore-onSnapshot-Listener. Verbindet sich ein
+  Client, bevor das erste Snapshot eintrifft, schickt der Relay
+  `{type:"lock_state", read_only:false}` und der Client ueberschreibt
+  damit den korrekten `read_only:true` aus `/api/load`. Folge: frisch
+  gepasteter Owner-Link zeigte ein gruenes/offenes Schloss statt
+  rot/gesperrt. `getRoomAuthEntry` liest `read_only` jetzt synchron
+  mit, und `attachRoomState` seedet damit den State sofort korrekt.
+- LOCK-FIX-04: Owner-Copy-Button-Sichtbarkeit wurde frueher nur in
+  `initLock` einmal anhand `ctx.isOwner` gesetzt. Brave-bf-cache hat
+  in seltenen Faellen einen Zwischenstand restauriert, in dem das
+  Lock-Toggle bereits in 'locked'-Zustand war, der Owner-Copy-Button
+  aber noch das alte `hidden=true` trug. Die Aktualisierung des
+  Buttons ist jetzt Teil von `updateLockButtonUi` und laeuft bei
+  jedem `applyLockState`-Call mit — der State heilt sich beim
+  naechsten Update von selber.
+- LOCK-FIX-05: Eine kurzlebige `body-class`-CSS-Defense
+  (`body:not(.has-lock-ui) #lockToggle ...`) wurde wieder entfernt.
+  Sie versteckte Buttons by-default und brauchte JS um sie sichtbar
+  zu machen — bei Tab-Restore mit Mismatch zwischen JS-Lauf und
+  CSS-Stand fielen beide Buttons unsichtbar aus. `[hidden]`-Rule
+  ist robust genug.
+
+### Tests
+- `tests/e2e/run_space_lock_e2e.mjs` erweitert auf jetzt 13 Schritte:
+  Owner-URL-Strip-Check, Welcome-Banner-Form, Owner-Link-Button-
+  Hidden-Check fuer Reader (computed display, nicht nur Attribut),
+  Live-Toggle, fresh-tab Owner, Owner-Tab navigiert zu Reader-URL,
+  parallel Owner+Reader im selben Browser-Context.
+
+### Out-of-Scope (bewusst)
+- Brave Shields koennen `Clear-Site-Data` Header oder
+  `version-check.js`-Fetches blockieren. In dem Fall hilft der
+  Workaround `brave://settings/clearBrowserData` selektiv.
+
 ## [1.2.0] - 2026-05-17
 
 Owner-Link und Read-Only-Sperre fuer Spaces. Der Ersteller kann beim
