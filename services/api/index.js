@@ -821,8 +821,22 @@ router.post('/delete', async (req, res) => {
     if (isExpiredData(data, Date.now())) return sendJson(res, 410, { error: 'expired' });
     if (!isWriteAuthorized(data, keyProof)) return sendJson(res, 403, { error: 'forbidden_no_key' });
 
+    // Order matters: drop RTDB (yjs updates + presence) first, then Firestore
+    // metadata. If RTDB fails we keep the Firestore doc so the next /delete
+    // retry or the scheduled cleanup picks the space up again. Doing it the
+    // other way around would orphan encrypted Yjs updates with no Firestore
+    // pointer to find them.
+    try {
+      await deleteRtdbPaths([id]);
+    } catch (rtdbErr) {
+      console.error('delete rtdb failed, keeping firestore doc for retry', {
+        id,
+        code: rtdbErr?.code,
+        message: rtdbErr?.message
+      });
+      return sendJson(res, 503, { error: 'rtdb_cleanup_failed' });
+    }
     await db.collection('spaces').doc(id).delete();
-    await deleteRtdbPaths([id]);
     return sendJson(res, 200, { ok: true });
   } catch (err) {
     console.error('delete error', err?.code || err?.message);
@@ -897,6 +911,7 @@ exports.cleanupExpired = onSchedule({
 }, async () => {
   const now = admin.firestore.Timestamp.now();
   let total = 0;
+  let rtdbFailedBatches = 0;
 
   while (true) {
     const snap = await db
@@ -908,19 +923,33 @@ exports.cleanupExpired = onSchedule({
 
     if (snap.empty) break;
 
-    const batch = db.batch();
-    const ids = [];
-    snap.docs.forEach((doc) => {
-      ids.push(doc.id);
-      batch.delete(doc.ref);
-    });
+    const ids = snap.docs.map((doc) => doc.id);
 
+    // RTDB first: if this batch fails, do not delete Firestore metadata for
+    // it. The next scheduled run will see the same expired spaces and retry,
+    // which avoids orphaning encrypted Yjs updates and presence tokens that
+    // we promise to remove after 24h. We break the loop after a failure to
+    // avoid infinite spinning when RTDB is broadly unavailable.
+    try {
+      await deleteRtdbPaths(ids);
+    } catch (rtdbErr) {
+      rtdbFailedBatches += 1;
+      console.error('cleanupExpired rtdb batch failed, keeping firestore docs for retry', {
+        batchSize: ids.length,
+        firstId: ids[0] || null,
+        code: rtdbErr?.code,
+        message: rtdbErr?.message
+      });
+      break;
+    }
+
+    const batch = db.batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
     await batch.commit();
-    await deleteRtdbPaths(ids);
     total += ids.length;
   }
 
   const deletedChallenges = await deleteExpiredChallengeDocs(now);
 
-  console.log('cleanupExpired done', { deleted: total, deletedChallenges });
+  console.log('cleanupExpired done', { deleted: total, deletedChallenges, rtdbFailedBatches });
 });
