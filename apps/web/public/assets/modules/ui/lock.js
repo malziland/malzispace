@@ -14,6 +14,7 @@ import {
 } from '../services/crypto.js';
 
 let lockButton = null;
+let ownerCopyButton = null;
 let inFlightToggle = false;
 let welcomeShown = false;
 
@@ -37,7 +38,19 @@ function setBodyUiClasses() {
   } catch (e) {}
 }
 
+function updateOwnerCopyUi() {
+  // Owner-copy button visibility must track the *current* ctx.isOwner on
+  // every state update, not just at init. Setting it only once in initLock
+  // left room for inconsistent states across page lifecycle events
+  // (bf-cache, hashchange-reload, async /api/load) and the user reported
+  // exactly such an inconsistency: lock toggle in 'locked' (owner) state
+  // while the owner-copy button kept hidden=true.
+  if (!ownerCopyButton) return;
+  ownerCopyButton.hidden = !ctx.isOwner;
+}
+
 function updateLockButtonUi() {
+  updateOwnerCopyUi();
   if (!lockButton) return;
   const readOnly = !!ctx.readOnly;
   const hasOwner = !!ctx.hasOwner;
@@ -186,13 +199,9 @@ export function initLock() {
   lockButton = document.getElementById('lockToggle');
   if (lockButton) lockButton.addEventListener('click', onLockToggleClick);
 
-  const ownerCopyBtn = document.getElementById('copyOwnerLink');
-  if (ownerCopyBtn) {
-    // Persistent copy-owner-link icon: visible only for owners, mirrors the
-    // welcome-banner copy button so the URL can always be re-copied after
-    // the address bar has been stripped.
-    ownerCopyBtn.hidden = !ctx.isOwner;
-    ownerCopyBtn.addEventListener('click', () => { copyOwnerUrl(null); });
+  ownerCopyButton = document.getElementById('copyOwnerLink');
+  if (ownerCopyButton) {
+    ownerCopyButton.addEventListener('click', () => { copyOwnerUrl(null); });
   }
 
   // Remove the owner secret from the address bar. Cached secrets live in
