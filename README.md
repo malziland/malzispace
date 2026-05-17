@@ -106,9 +106,10 @@ Datenschutz ist kein Feature — es ist das Fundament:
 - **Verschluesselte Titel**: Auch Space-Titel werden clientseitig verschluesselt, bevor sie den Server erreichen
 - **Write-Authorization**: Schreibzugriffe erfordern `key_proof` (SHA-256 Hash des Schluessels) — der Server kann autorisieren, ohne den Schluessel zu kennen
 - **Keine Speicherung**: Spaces werden nach 24h automatisch geloescht (Firestore TTL + Scheduled Cleanup)
-- **Keine externen Scripts**: Alle Assets self-hosted (Fonts: Inter + JetBrains Mono). Kein Google Fonts CDN, kein unpkg
+- **Eigene Assets self-hosted**: Fonts (Inter + JetBrains Mono), CSS, JS und Bilder kommen aus dem eigenen Hosting — kein Google Fonts CDN, kein unpkg, keine Analytics-Pixel
+- **Eine Drittanbieter-Quelle**: Firebase App Check laedt sein SDK von `https://www.gstatic.com/firebasejs/...`. Das Modul macht die Proof-of-Work-Attestation, sendet keine Telemetrie ueber Nutzerinhalte und ist die einzige nicht selbst gehostete Skriptquelle in der CSP. Kein reCAPTCHA, kein hCaptcha, kein Werbe- oder Analytics-Skript
 - **Keine Cookies**: Kein Tracking, kein Session-Cookie, kein Analytics-Pixel
-- **Strenge CSP**: `script-src 'self'` + Firebase AppCheck Domain. Keine Inline-Scripts, kein `unsafe-eval`
+- **Strenge CSP**: `script-src 'self'` + Firebase AppCheck Domain (`https://www.gstatic.com`). Keine Inline-Scripts, kein `unsafe-eval`
 - **Privacy-Header**: HSTS mit Preload, X-Frame-Options DENY, Referrer-Policy no-referrer, Permissions-Policy restriktiv
 
 Details: [malzi.space/privacy.html](https://malzi.space/privacy.html)
@@ -328,7 +329,7 @@ Der Collab-Relay (`services/collab-relay/`) ist ein minimaler WebSocket Broadcas
 - Keine Tracking-Cookies, keine Analytics, keine Werbung
 - Verschluesselte Inhalte sind fuer den Server unlesbarer Ciphertext
 - Alle Daten werden nach 24h automatisch geloescht
-- Kein Firebase SDK im Frontend (nur App Check)
+- Firebase-SDK im Frontend nur fuer App Check (Proof-of-Work-Attestation, geladen von `gstatic.com`); kein Analytics-, Auth- oder Datenbank-SDK
 - Details: [malzi.space/privacy.html](https://malzi.space/privacy.html)
 
 ## Lizenz
