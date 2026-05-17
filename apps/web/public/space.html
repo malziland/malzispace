@@ -30,14 +30,18 @@
         <span id="titleLabel" class="title-label" hidden data-i18n="space.title.label">Titel</span>
         <span id="titleView" class="title" hidden></span>
         <div class="toolbar-actions">
-          <button id="copyOwnerLink" class="icon-action" type="button" hidden aria-label="Owner-Link kopieren" data-i18n-aria-label="space.owner.copyLink" title="Owner-Link kopieren" data-i18n-title="space.owner.copyLink">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>
-          </button>
           <button id="lockToggle" class="icon-action lock-toggle" type="button" hidden data-state="open" aria-label="Space sperren" data-i18n-aria-label="space.lock.toggleUnlocked" title="Space sperren" data-i18n-title="space.lock.toggleUnlocked">
             <svg class="lock-icon lock-icon--closed" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none"/></svg>
             <svg class="lock-icon lock-icon--open" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.9-1" fill="none"/></svg>
           </button>
-          <button id="showQr" class="btn" type="button" data-i18n="space.button.share">Teilen</button>
+          <button id="copyOwnerLink" class="btn btn-with-icon copy-owner-btn" type="button" hidden aria-label="Owner-Link kopieren" data-i18n-aria-label="space.owner.copyLink" title="Owner-Link kopieren" data-i18n-title="space.owner.copyLink">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>
+            <span data-i18n="space.owner.linkLabel">Owner-Link</span>
+          </button>
+          <button id="showQr" class="btn btn-with-icon" type="button" aria-label="Lese-Link teilen" data-i18n-aria-label="space.share.aria" title="Lese-Link teilen" data-i18n-title="space.share.aria">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.7l7.6-4.4M8.2 13.3l7.6 4.4"/></svg>
+            <span data-i18n="space.button.share">Teilen</span>
+          </button>
         </div>
         <span id="presence" class="pill">…</span>
         <span id="status" class="status-dot status-dot--ok" title="Verbunden" data-i18n-title="status.connected" aria-label="Verbunden" data-i18n-aria-label="status.connected"></span>

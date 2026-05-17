@@ -64,6 +64,28 @@ footer.center{ text-align:center; margin-top:18px; }
   color: rgba(255,255,255,.75);
   transition: color .15s ease, opacity .15s ease, transform .1s ease;
 }
+.btn-with-icon{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-with-icon svg{
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.copy-owner-btn{
+  border-color: rgba(239,68,68,.4);
+  color: #fca5a5;
+}
+.copy-owner-btn:hover{
+  border-color: #ef4444;
+  color: #fff;
+}
 .icon-action:hover{ color: #fff; }
 .icon-action:active{ transform: scale(.96); }
 .icon-action svg{

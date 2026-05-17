@@ -222,8 +222,22 @@ async function main() {
     await waitForLockState(readerPage, 'locked', { timeoutMs: 8000 });
     pass('PASS reader_relocks_live - editor disabled again after owner re-lock');
 
+    // -- Pasting the owner URL in a fresh context must keep owner powers ----
+    const ownerContext2 = await browser.newContext();
+    await applyTestHarness(ownerContext2, stack.relayUrl);
+    const ownerPage2 = await ownerContext2.newPage();
+    await ownerPage2.goto(initialOwnerUrl, { waitUntil: 'domcontentloaded' });
+    await ownerPage2.waitForSelector('#editor', { timeout: 10_000 });
+    await waitFor(() => isEditorEditable(ownerPage2), { timeoutMs: 15_000, label: 'owner editor editable in fresh tab' });
+    await waitFor(async () => {
+      const s = await getLockButtonState(ownerPage2);
+      return s.exists && !s.hidden && s.state === 'locked' && !s.disabled;
+    }, { timeoutMs: 8000, label: 'fresh-tab owner sees enabled lock' });
+    pass('PASS fresh_owner_tab - pasting owner URL in a new tab keeps full owner powers');
+
     await ownerContext.close();
     await readerContext.close();
+    await ownerContext2.close();
   } finally {
     if (browser) await browser.close().catch(() => {});
     await stack.stop();
