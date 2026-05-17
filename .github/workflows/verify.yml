@@ -32,11 +32,27 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Install (workspaces)
         run: npm ci
 
-      - name: Audit (prod deps)
+      - name: Install (services/api lockfile)
+        run: npm ci --no-workspaces
+        working-directory: services/api
+
+      - name: Install (services/collab-relay lockfile)
+        run: npm ci --no-workspaces
+        working-directory: services/collab-relay
+
+      - name: Audit root (prod deps)
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit services/api (prod deps)
+        run: npm audit --omit=dev --audit-level=high --no-workspaces
+        working-directory: services/api
+
+      - name: Audit services/collab-relay (prod deps)
+        run: npm audit --omit=dev --audit-level=high --no-workspaces
+        working-directory: services/collab-relay
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
