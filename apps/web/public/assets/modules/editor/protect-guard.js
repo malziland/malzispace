@@ -275,6 +275,24 @@ function placeCaretAtBlockStartOutsideOwner(block) {
 }
 
 /**
+ * True if any block AFTER the caret's containing block contains owner-marked
+ * content. Used to decide whether the participant is allowed to append at
+ * the end of the caret's current owner span — if more trainer content
+ * follows (with or without empty blocks in between), appending here would
+ * wedge participant text between two trainer regions and is forbidden.
+ */
+function laterBlockHasOwner(range) {
+  const block = getContainingBlock(range.startContainer);
+  if (!block) return false;
+  let next = block.nextElementSibling;
+  while (next) {
+    if (next.querySelector && next.querySelector(OWNER_SELECTOR)) return true;
+    next = next.nextElementSibling;
+  }
+  return false;
+}
+
+/**
  * Detect whether the caret sits exactly at a boundary of an owner span
  * (right before its first leaf, or right after its last leaf). Inside the
  * span text itself returns null — that's the "split owner content" case
@@ -524,15 +542,17 @@ function blockIfProtected(e) {
   // check below still catches "owner content to the right of the caret".
   if (isTextInsert) {
     if (rangeTouchesOwner(range)) {
-      // Caret at the *end* boundary of an owner span and nothing else owner-
-      // marked sits after it in the same block: redirect the insert to a
-      // sibling text node outside the span. This is the common case when a
-      // participant clicks at the bottom of protected content and starts
-      // typing — without this, the caret naturally lands inside the last
-      // owner span and every keystroke gets blocked.
+      // Caret at the END boundary of an owner span: redirect only if NO
+      // further trainer content follows in any subsequent block. Otherwise
+      // appending here would wedge participant text into a trainer region
+      // (between two owner blocks). The participant must move into an empty
+      // line between blocks, or below the last trainer block, to write.
       if (it === 'insertText' && typeof e.data === 'string' && e.data.length) {
         const boundary = findOwnerBoundary(range);
-        if (boundary && boundary.position === 'after' && !ownerInSameBlockAfterCursor(range)) {
+        if (boundary
+            && boundary.position === 'after'
+            && !ownerInSameBlockAfterCursor(range)
+            && !laterBlockHasOwner(range)) {
           e.preventDefault();
           insertTextAtOwnerBoundary(boundary, e.data);
           diag(`part.redirect-after(${it}) "${e.data}"`);
@@ -544,6 +564,10 @@ function blockIfProtected(e) {
       diag(`part.block-modify(${it})`);
       return true;
     }
+    // Same-block displacement: typing here would push owner content right
+    // within the SAME block. Cross-block typing (e.g. in an empty line that
+    // sits between two trainer blocks) is fine — it doesn't push the next
+    // block down, it just fills the existing gap.
     if (ownerInSameBlockAfterCursor(range)) {
       e.preventDefault();
       toast('space.protect.toast.displace');
@@ -568,7 +592,14 @@ function blockIfProtected(e) {
       toast('space.protect.toast.modify');
       return true;
     }
-    if (nextContentIsOwner(range) || ownerInSameBlockAfterCursor(range)) {
+    // Empty participant block sitting between trainer blocks: Enter is fine
+    // here — splitting an empty line just creates more participant space and
+    // doesn't change which content is protected.
+    const enterContainingBlock = getContainingBlock(range.startContainer);
+    const enterInEmptyBlock = enterContainingBlock
+      && !(enterContainingBlock.textContent || '').replace(/​/g, '').replace(/ /g, ' ').trim()
+      && !enterContainingBlock.querySelector(OWNER_SELECTOR);
+    if (!enterInEmptyBlock && (nextContentIsOwner(range) || ownerInSameBlockAfterCursor(range))) {
       e.preventDefault();
       toast('space.protect.toast.displace');
       return true;

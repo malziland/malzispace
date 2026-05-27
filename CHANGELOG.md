@@ -2,6 +2,39 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.5] - 2026-05-27
+
+Praezisierung der Schutz-Regel nach User-Feedback: Teilnehmer darf
+NICHT zwischen zwei aneinander grenzende Trainer-Bloecke schreiben,
+aber DARF in einer Leerzeile schreiben, die der Trainer zwischen
+zwei Bloecken gelassen hat.
+
+### Fixed
+- PROTECT-BUG-12: Bei `findOwnerBoundary` an der End-Grenze einer
+  Trainer-Span wurde der Insert auch dann in den Block der Span
+  hinein-redirected, wenn unmittelbar darunter ein weiterer
+  Trainer-Block stand. Folge: Teilnehmer-Text klebte direkt hinter
+  einer Trainer-Zeile, obwohl darunter noch mehr Trainer-Inhalt kam
+  (siehe Screenshot Zeile 17 vom 2026-05-27). Der Redirect prueft
+  jetzt zusaetzlich `laterBlockHasOwner(range)` — ist in einem
+  spaeteren Block noch Trainer-Inhalt, wird stattdessen
+  `space.protect.toast.modify` ausgeloest. Teilnehmer muss in eine
+  vom Trainer gelassene Leerzeile klicken oder unter den letzten
+  Trainer-Block.
+
+### Changed
+- PROTECT-RULE-01: `nextContentIsOwner` Check fuer Text-Insertion
+  ENTFERNT — er hatte Tippen in vom Trainer gelassenen Leerzeilen
+  unterbunden (je nach `<br>` Status inkonsistent). Stattdessen
+  blockiert nur noch `ownerInSameBlockAfterCursor` (gleicher Block
+  rechts vom Cursor enthaelt Trainer-Inhalt). Cross-Block-Tippen in
+  Leerzeile zwischen Trainern: erlaubt.
+- PROTECT-RULE-02: Enter im Leerblock zwischen zwei Trainer-Bloecken
+  ist jetzt erlaubt — `enterInEmptyBlock`-Bedingung umgeht den
+  `nextContentIsOwner`-Displacement-Check, wenn der umgebende Block
+  leer ist und kein Owner-Markup enthaelt. Splitten einer Leerzeile
+  ist semantisch nur "Teilnehmer-Raum vergroessern".
+
 ## [1.3.4] - 2026-05-27
 
 Regression aus dem 3-Stufen-Mode-Switch (v1.3.1) korrigiert plus
