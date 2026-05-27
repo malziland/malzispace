@@ -2,234 +2,120 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
-## [1.3.6] - 2026-05-27
-
-### Fixed
-- PROTECT-BUG-13: Wenn der Teilnehmer vor v1.3.5 Muell-Text neben einen
-  Trainer-Header geschrieben hatte (Plain-Text-Sibling der Owner-Span im
-  selben Block), konnte er den eigenen Text weiterhin erweitern — der
-  Cursor stand jetzt nicht mehr IN der Owner-Span, sondern daneben, und
-  meine 1.3.5-Logik pruefte nur `ownerInSameBlockAfterCursor`. Neue
-  Bedingung: enthaelt der umgebende Block Owner-Inhalt **und** folgt
-  spaeter noch ein Trainer-Block, wird das Tippen mit
-  `space.protect.toast.modify` blockiert. Ein leerer Block zwischen zwei
-  Trainer-Bloecken bleibt schreibbar (keine Owner-Span im Block selbst).
-
-## [1.3.5] - 2026-05-27
-
-Praezisierung der Schutz-Regel nach User-Feedback: Teilnehmer darf
-NICHT zwischen zwei aneinander grenzende Trainer-Bloecke schreiben,
-aber DARF in einer Leerzeile schreiben, die der Trainer zwischen
-zwei Bloecken gelassen hat.
-
-### Fixed
-- PROTECT-BUG-12: Bei `findOwnerBoundary` an der End-Grenze einer
-  Trainer-Span wurde der Insert auch dann in den Block der Span
-  hinein-redirected, wenn unmittelbar darunter ein weiterer
-  Trainer-Block stand. Folge: Teilnehmer-Text klebte direkt hinter
-  einer Trainer-Zeile, obwohl darunter noch mehr Trainer-Inhalt kam
-  (siehe Screenshot Zeile 17 vom 2026-05-27). Der Redirect prueft
-  jetzt zusaetzlich `laterBlockHasOwner(range)` — ist in einem
-  spaeteren Block noch Trainer-Inhalt, wird stattdessen
-  `space.protect.toast.modify` ausgeloest. Teilnehmer muss in eine
-  vom Trainer gelassene Leerzeile klicken oder unter den letzten
-  Trainer-Block.
-
-### Changed
-- PROTECT-RULE-01: `nextContentIsOwner` Check fuer Text-Insertion
-  ENTFERNT — er hatte Tippen in vom Trainer gelassenen Leerzeilen
-  unterbunden (je nach `<br>` Status inkonsistent). Stattdessen
-  blockiert nur noch `ownerInSameBlockAfterCursor` (gleicher Block
-  rechts vom Cursor enthaelt Trainer-Inhalt). Cross-Block-Tippen in
-  Leerzeile zwischen Trainern: erlaubt.
-- PROTECT-RULE-02: Enter im Leerblock zwischen zwei Trainer-Bloecken
-  ist jetzt erlaubt — `enterInEmptyBlock`-Bedingung umgeht den
-  `nextContentIsOwner`-Displacement-Check, wenn der umgebende Block
-  leer ist und kein Owner-Markup enthaelt. Splitten einer Leerzeile
-  ist semantisch nur "Teilnehmer-Raum vergroessern".
-
-## [1.3.4] - 2026-05-27
-
-Regression aus dem 3-Stufen-Mode-Switch (v1.3.1) korrigiert plus
-Live-Diagnose-Panel fuer Schutz-Bugs ohne DevTools.
-
-### Fixed
-- PROTECT-BUG-11: `mode.js` rief `markAllExistingAsOwner` bei **jedem**
-  Klick auf "Schutz" auf — egal ob im Space bereits Owner-Inhalt
-  existierte. Folge: wenn der Trainer auf "Frei" schaltete, der
-  Teilnehmer etwas tippte, und der Trainer wieder auf "Schutz" ging,
-  wurde der Teilnehmer-Text faelschlich als Trainer-Inhalt markiert
-  und protected. Mirrors jetzt das `protect.js`-Verhalten aus v1.3.0:
-  retroaktive Markierung laeuft nur, wenn aktuell **keine**
-  `.mz-owner-text` Span im Editor existiert. Ist die Grenze einmal
-  gezogen, bleibt sie stehen.
-
-### Added
-- DIAG-01: Live-Diagnose-Panel oben rechts (URL um `?diag=1` ergaenzen,
-  z.B. `https://malzispace.web.app/space.html?id=...&diag=1#...`).
-  Zeigt `ctx.isOwner`, `ctx.appendOnly`, `ctx.readOnly`, Editor
-  editable-Status, Anzahl `.mz-owner-text` Spans im Editor und das
-  Ergebnis des letzten `beforeinput`-Events (wrap / passthrough /
-  block-modify / redirect / clean-newline). Ueber `protect-diag.js`,
-  inert ohne den Query-Parameter. Macht den Status der Schutz-Logik
-  ohne Browser-DevTools sichtbar.
-
-## [1.3.3] - 2026-05-27
-
-Notfall-Fix zu v1.3.2: Teilnehmer konnten weiterhin nicht in den
-geschuetzten Spaces schreiben, weil mein Enter-Intercept einen zu
-engen Bedingungs-Check hatte und `rangeTouchesOwner` fuer kollabierte
-Carets an Span-Grenzen in einigen Browsern faelschlich `true` lieferte.
-
-### Fixed
-- PROTECT-BUG-09: Mein Enter-Intercept aus 1.3.2 feuerte nur, wenn der
-  Caret laut DOM **in** einem `.mz-owner-text` steckte
-  (`isInsideOwnerSpan(range.startContainer)`). In der Praxis landet
-  der Caret beim Klick ans Ende einer geschuetzten Zeile aber oft
-  **knapp dahinter** (z.B. `(p, 1)` direkt nach der Span, nicht im
-  Textknoten der Span). Dort schlug der Check fehl, der Browser
-  uebernahm Enter selbst und klonte die `mz-owner-text` Span in den
-  neuen Block — Caret im leeren Owner-Span, jeder weitere Input
-  blockiert. Der Intercept feuert jetzt sobald der **umgebende
-  Block** Owner-Inhalt enthaelt, egal wo genau der Caret innerhalb
-  des Blocks sitzt.
-- PROTECT-BUG-10: `rangeTouchesOwner` rief fuer **kollabierte** Carets
-  zusaetzlich `range.intersectsNode(span)` ueber alle Owner-Spans auf.
-  Die WHATWG-Spec macht diesen Check fuer Carets an angrenzenden
-  Boundary-Points uneindeutig — manche Browser-Implementierungen
-  liefern `true` fuer einen Caret direkt nach einer Span. Folge:
-  Tippen in der frisch erzeugten Teilnehmer-Zeile darunter wurde
-  faelschlich blockiert. Fuer kollabierte Carets wird jetzt
-  ausschliesslich `startEl.closest(.mz-owner-text)` genutzt — ein
-  Punkt ausserhalb einer Span beruehrt sie definitionsgemaess nicht.
-  Fuer echte Selektionen bleibt der Walk-Check erhalten.
-
-## [1.3.2] - 2026-05-27
-
-Folge-Bugfixes am Schutzmodus aus 1.3.1. Zwei Symptome aus dem
-Live-Test wurden behoben: Teilnehmer landeten nach Enter in einer
-leeren Owner-Span und konnten weder tippen noch loeschen; und vom
-Owner per Strg+V eingefuegter Text war nicht als Owner-Inhalt
-markiert, sodass der Schutz fuer Pasted-Content bis zum naechsten
-Frei→Schutz-Toggle nicht griff.
-
-### Fixed
-- PROTECT-BUG-05: Wenn der Teilnehmer am Ende einer Owner-Span Enter
-  drueckt, klont der Browser die Inline-Struktur in den neuen Block.
-  Der Cursor saass in einer leeren `.mz-owner-text` Span und jeder
-  weitere `insertText` / `deleteContent*` wurde als Edit am
-  Trainer-Text gewertet und blockiert. Der `protect-guard` uebernimmt
-  jetzt die Erzeugung des neuen Blocks selbst, wenn der Cursor in
-  einer Owner-Span steht, und positioniert den Caret im frischen
-  Block ausserhalb jeder Owner-Markierung
-  (`insertCleanParagraphAfterCaret`). Damit funktioniert das Tippen
-  in der neuen Zeile sofort.
-- PROTECT-BUG-06: Backspace/Delete auf einer leeren, vom Teilnehmer
-  gerade angelegten Zeile war pauschal blockiert, weil die zugehoerige
-  Target-Range die benachbarte Owner-Span beruehrt. Der Guard
-  erkennt jetzt rein-leere Teilnehmer-Bloecke
-  (`deleteEmptyParticipantBlock`) und entfernt nur den leeren Block
-  ohne den Owner-Inhalt anzufassen. Der Caret wird auf dem
-  Nachbarblock ausserhalb der Owner-Span platziert.
-- PROTECT-BUG-07: Owner pasted Inhalt waehrend Schutz an war kam als
-  unmarkierter HTML-Fragment in den Editor; Teilnehmer konnten den
-  frisch eingefuegten Text frei editieren bis der Owner einmal
-  Frei→Schutz toggelte (was `markAllExistingAsOwner` ausloeste).
-  `editor/clipboard.js` umhuellt jetzt jeden Pasted-Block in eine
-  Owner-Span (oder bei reinem Inline-Fragment einen einzigen Wrap),
-  sobald `ctx.appendOnly && ctx.isOwner` gilt
-  (`wrapPasteAsOwner`). Pasted-Content ist damit ab dem ersten
-  Render Teil des Schutzes.
-- PROTECT-BUG-08: Teilnehmer klickte unten in den Editor um zu
-  schreiben; der Caret landete automatisch im letzten Textknoten
-  der letzten Owner-Span (= "innerhalb von Owner-Inhalt") und jeder
-  Tastenanschlag wurde mit "Trainer-Inhalt kann nicht veraendert
-  werden" geblockt. `findOwnerBoundary` erkennt jetzt, ob der Caret
-  exakt auf der End-Grenze einer Owner-Span sitzt (also direkt nach
-  dem letzten Zeichen, kein weiterer Owner-Inhalt im selben Block
-  dahinter), und `insertTextAtOwnerBoundary` schreibt den Text in
-  einen Geschwister-Textknoten ausserhalb der Span. Der Teilnehmer
-  kann jetzt direkt am Ende der geschuetzten Bloecke lostippen,
-  ohne erst Enter druecken zu muessen.
-
 ## [1.3.1] - 2026-05-27
 
-UX-Iteration und Bugfixes am Append-Only-Schutz aus v1.3.0. Die zwei
-einzelnen Icon-Buttons (Schloss + Schild) wurden zu einem segmentierten
-Schalter mit drei Stufen zusammengefasst. Ein eigener Build-Pre-Check
-verhindert ab jetzt, dass JavaScript-Syntaxfehler je wieder live gehen.
+Iterative UX- und Bugfix-Runde am Append-Only-Schutz aus v1.3.0.
+Sechs Hotfix-Deploys an einem Tag (Live-Tags v1.3.1 bis v1.3.6) sind
+hier zu einem Eintrag zusammengefasst; sie bilden gemeinsam den jetzt
+stabilen Zustand des Schutzmodus inklusive klarer Regeln fuer Trainer-
+und Teilnehmer-Schreibrechte.
 
 ### Added
-- MODE-SWITCH-01: Neuer 3-Stufen-Schalter `Frei | Schutz | Sperre`
-  ersetzt die einzelnen Schild- und Schloss-Buttons fuer den Owner.
-  Klar erkennbarer Aktiv-Zustand (gruen / orange / rot), gegenseitig
-  ausschliessend, ein Klick reicht. `apps/web/public/assets/modules/ui/mode.js`
-  orchestriert die zwei darunterliegenden Endpoints `/api/lock` und
-  `/api/append-only` und reagiert auf beide Relay-Frames.
-- MODE-SWITCH-02: Lock-Banner fuer Teilnehmer (rote Variante des
-  Schutz-Banners). Wenn der Trainer den Space sperrt, sehen Teilnehmer
-  jetzt nicht nur das rote Schloss-Icon sondern auch eine Erklaerung
-  unter der Toolbar — konsistent mit dem Schutz-Banner.
-- MODE-SWITCH-03: Passiver Schild-Indikator fuer Teilnehmer bei
-  aktivem Schutz. Spiegelt das Verhalten des read-only Schloss-Icons
-  und macht den Zustand auch in der Toolbar sichtbar (Banner allein
-  war je nach Scroll-Position weg).
-- AUTO-MARK-01: One-shot Auto-Markierung beim Oeffnen bestehender
-  Spaces. Wenn der Owner einen Space oeffnet wo Schutz aktiv ist aber
-  der Inhalt nicht markiert ist (z.B. weil er vor dem Fix aktiviert
-  wurde), wird der vorhandene Text rueckwirkend in `.mz-owner-text`
-  eingewickelt und ueber CRDT + saveNow synchronisiert.
-- BUILD-CHECK-01: `tools/bin/build_hosting.mjs` ruft `node --check`
+- 3-Stufen-Mode-Switch `Frei | Schutz | Sperre` ersetzt die einzelnen
+  Schild- und Schloss-Buttons. Klar erkennbarer Aktiv-Zustand
+  (gruen / orange / rot), gegenseitig ausschliessend, ein Klick.
+  `apps/web/public/assets/modules/ui/mode.js` orchestriert die
+  Endpoints `/api/lock` + `/api/append-only` und beide Relay-Frames.
+- Lock-Banner fuer Teilnehmer (rote Variante des Schutz-Banners) plus
+  passiver Schild-Indikator in der Toolbar — beide Modi sind jetzt
+  in der Toolbar UND ueber ein Banner sichtbar, unabhaengig von der
+  Scroll-Position.
+- One-shot Auto-Markierung beim Oeffnen bestehender Spaces mit
+  aktivem Schutz aber ohne `.mz-owner-text` Markierung (Legacy-Rescue).
+- Live-Diagnose-Panel ueber `?diag=1` Query-Param. Zeigt
+  `ctx.isOwner`, `ctx.appendOnly`, `ctx.readOnly`, editable-Status,
+  Anzahl Owner-Spans und das Ergebnis des letzten beforeinput-Events.
+  Ohne Query-Param inert.
+- Build-Pre-Check: `tools/bin/build_hosting.mjs` ruft `node --check`
   ueber alle JS-Quellen auf, bevor der Build den Asset-Tree faengt.
-  Ein Syntaxfehler bricht den Build sofort ab, das fehlerhafte File
-  wird benannt — keine Chance, defektes JavaScript zu deployen.
+  Verhindert defektes JavaScript live zu gehen.
+- Toolbar-Layout fuer schmale Viewports: Mode-Switch in eigener voller
+  Breite-Zeile, Owner-Link + Lese-Link mit Label statt nur Icons.
+- I18N: neue String-Bloecke `space.mode.*`, `space.lock.banner.*`,
+  `space.protect.readOnly`.
 
-### Changed
-- MOBILE-01: Toolbar-Layout fuer schmale Viewports neu aufgebaut.
-  Mode-Switch belegt jetzt eine eigene volle Breite-Zeile mit gleich
-  grossen Segmenten. Owner-Link und Lese-Link Buttons sind kompakt
-  aber **mit Label** dargestellt — vorher nur Icons, was zu
-  Verwechslungsgefahr gefuehrt hat.
-- I18N-PROTECT-01: Drei neue String-Bloecke hinzugefuegt:
-  - `space.mode.*` fuer den Schalter selbst (Tooltip + Label je Segment)
-  - `space.lock.banner.*` fuer die Sperre-Banner-Texte (Trainer/Teilnehmer)
-  - `space.protect.readOnly` fuer den Hover-Text des passiven Schild-Indikators
+### Verhalten im Schutz-Modus (jetzt stabil)
 
-### Fixed
-- PROTECT-BUG-01: Wenn protect aktiviert wurde, lief `markAllExistingAsOwner`
-  nur ueber die obersten Editor-Bloecke und nur beim allerersten Toggle.
-  Spaces mit gemischtem oder bereits einmal getoggelten Inhalt
-  blieben unmarkiert. Logik wurde umgestellt: bei jeder Aktivierung
-  wird jeder Block geprueft und entweder vollstaendig oder
-  Text-Knoten-weise nachmarkiert. Nach dem Markieren wird ein
-  `saveNow()` (kein debouncted `queueSave`) erzwungen, damit das
-  naechste `/api/load` den korrekten Stand liefert.
-- PROTECT-BUG-02: Optimistic UI-Update setzte `ctx.appendOnly` vor
-  der Server-Anfrage, wodurch die anschliessende Vergleichspruefung
-  `Boolean(ctx.appendOnly) !== wantProtected` immer `false` ergab
-  und `postAppendOnly` nie aufgerufen wurde. Der originale Zustand
-  wird jetzt vor dem optimistischen Apply als `wasProtected` /
-  `wasLocked` festgehalten und die API-Aufrufe vergleichen gegen
-  diesen Snapshot.
-- PROTECT-BUG-03: Verschiebung-Sperre des Editor-Guards war zu
-  aggressiv und blockierte auch Tippen in leeren Zeilen zwischen
-  Trainer-Bloecken. `insertText` und `insertParagraph` werden jetzt
-  getrennt behandelt: `insertText` blockiert nur wenn Owner-Text in
-  derselben Zeile rechts vom Cursor liegt, `insertParagraph` nur wenn
-  spaeter im Dokument noch Owner-Inhalt folgt.
-- PROTECT-BUG-04: Enter direkt am Ende eines Owner-Spans war pauschal
-  blockiert obwohl es keinen Trainer-Text verschiebt. Eigene Bedingung
-  `cursorInsideOwnerWithContentAfter` unterscheidet jetzt zwischen
-  Cursor mittendrin (Split-Gefahr → blockiert) und Cursor am Ende
-  (saubere neue Zeile darunter → erlaubt).
+**Trainer (Owner) im Schutz an:**
+- Tippen wird sofort in `.mz-owner-text` Span eingewickelt
+  (`wrapOwnerInsert`). Auch Strg+V Paste wird umhuellt
+  (`wrapPasteAsOwner` in `editor/clipboard.js`).
+- Beim ersten Aktivieren von Schutz wird vorhandener Text retroaktiv
+  markiert. Bei spaeteren Frei → Schutz Wechseln passiert das nur
+  noch dann, wenn aktuell **keine** Owner-Span existiert — die
+  Grenze zwischen Trainer- und Teilnehmer-Inhalt bleibt damit
+  stabil.
+
+**Teilnehmer im Schutz an:**
+- Direkt im Trainer-Text tippen: blockiert mit Toast „Trainer-Inhalt
+  kann nicht veraendert werden".
+- Am Ende eines Trainer-Blocks tippen wenn darunter noch ein
+  Trainer-Block kommt (mit oder ohne Plain-Text dazwischen):
+  blockiert. Eingefuegter Text wuerde sonst zwischen zwei
+  Trainer-Regionen festkleben.
+- In einer vom Trainer gelassenen **Leerzeile** zwischen zwei
+  Trainer-Bloecken: tippen + Enter erlaubt — der Trainer hat den
+  Raum bewusst angelegt.
+- Am Ende des letzten Trainer-Blocks: Enter erzeugt eine saubere
+  neue Zeile darunter (`insertCleanParagraphAfterCaret`),
+  Direkt-Tippen schreibt in einen Geschwister-Textknoten ausserhalb
+  jeder Owner-Span (`insertTextAtOwnerBoundary`).
+- Backspace/Delete auf einer leeren, gerade angelegten
+  Teilnehmer-Zeile entfernt nur die leere Zeile, ohne den
+  benachbarten Trainer-Block anzufassen
+  (`deleteEmptyParticipantBlock`).
+
+### Fixed (kumuliert)
+
+Die folgenden Bugs aus dem 1.3.1 Mode-Switch-Refactor wurden in 13
+Schritten gefixt — der jetzige Stand ist konsistent:
+
+- **Mode-Switch & State.** `mode.js` rief `markAllExistingAsOwner` bei
+  jedem Schutz-Klick auf und wickelte dabei spaeter dazugekommenen
+  Teilnehmer-Text ein. Faellt jetzt nur noch beim allerersten
+  Aktivieren. Optimistischer State-Update vergleicht gegen einen
+  vor-dem-Apply festgehaltenen Snapshot, sodass die API-Calls nicht
+  geschluckt werden.
+- **Browser-Inline-Cloning bei Enter.** Wenn der Caret in einer
+  Owner-Span war und der Teilnehmer Enter drueckte, klonte der
+  Browser die Span in den neuen Block — Caret im leeren Owner-Span
+  → alle weiteren Eingaben geblockt. `protect-guard` erzeugt den
+  neuen Block jetzt selbst und positioniert den Caret ausserhalb
+  jeder Owner-Markierung.
+- **Caret-Positionierungs-Edge-Cases.** Der Enter-Intercept feuert
+  jetzt sobald der umgebende Block Owner-Inhalt enthaelt, egal
+  wo der Caret innerhalb des Blocks sitzt — frueher fiel das durch,
+  wenn der Caret laut DOM knapp neben der Span stand statt drin.
+  `rangeTouchesOwner` benutzt fuer kollabierte Carets nur noch
+  `startEl.closest(.mz-owner-text)`, da `range.intersectsNode` an
+  Boundary-Points uneindeutig ist und manche Browser fuer benachbarte
+  Positionen `true` lieferten.
+- **Owner-Paste blieb ungeschuetzt.** Per Strg+V eingefuegter Text
+  wurde bis zum naechsten Frei → Schutz Toggle frei editierbar.
+  Wird jetzt direkt beim Paste umhuellt.
+- **Wedged Plain-Text.** Wenn der Teilnehmer vor einem Fix Muell-Text
+  neben einen Trainer-Header geschrieben hatte (Plain-Text-Sibling
+  der Owner-Span im selben Block), konnte er den eigenen Text
+  weiterhin erweitern. Neue Bedingung: enthaelt der umgebende Block
+  Owner-Inhalt **und** folgt spaeter noch ein Trainer-Block, wird
+  Tippen blockiert.
+- **Boundary-Redirect zu permissiv.** Tippen am Ende einer Owner-Span
+  wurde auch dann in den Block der Span hinein-redirected, wenn
+  unmittelbar darunter ein weiterer Trainer-Block stand. Prueft jetzt
+  zusaetzlich `laterBlockHasOwner(range)`.
+- **Leerzeile-Schutz inkonsistent.** Der frueher genutzte
+  `nextContentIsOwner` Check fuer Text-Insertion unterband Tippen in
+  vom Trainer gelassenen Leerzeilen — je nach `<br>` Platzhalter
+  inkonsistent. Entfernt; nur noch
+  `ownerInSameBlockAfterCursor` greift fuer Text-Insertion. Enter
+  im Leerblock zwischen zwei Trainern wird ueber
+  `enterInEmptyBlock`-Bedingung explizit erlaubt.
 
 ### Defensive
-- CSS-SAFETY-01: Zusaetzliche CSS-Regel
-  `body.has-append-only:not(.has-owner-ui) #protectToggle`
+- CSS-Regel `body.has-append-only:not(.has-owner-ui) #protectToggle`
   erzwingt die Sichtbarkeit des Teilnehmer-Schild-Indikators per
-  Specificity, falls JavaScript aus irgendeinem Grund das `hidden`-
-  Attribut nicht aktualisiert haben sollte. Belt-and-suspenders fuer
-  Zustaende die das Banner zeigen aber das Toolbar-Icon nicht.
+  Specificity als Backup falls JavaScript das `hidden`-Attribut
+  nicht aktualisiert haben sollte.
 
 ## [1.3.0] - 2026-05-27
 
