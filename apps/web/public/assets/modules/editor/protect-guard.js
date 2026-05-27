@@ -28,10 +28,18 @@ function isOwnerNode(node) {
 /** True if the given Range overlaps any owner-marked content. */
 function rangeTouchesOwner(range) {
   if (!range || !ctx.editor) return false;
-  // Quick check: an ancestor of either endpoint is owner-marked.
+  // Endpoint(s) inside an owner span — always counts as "touching".
   const startEl = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
   if (startEl && startEl.closest && startEl.closest(OWNER_SELECTOR)) return true;
-  // Walk every owner span and check intersection.
+  // A collapsed caret that is NOT inside an owner span cannot overlap one,
+  // even if it sits at a boundary point adjacent to a span. The earlier
+  // `intersectsNode` walk was too eager: some browser implementations flag
+  // adjacent boundary points as intersecting, which blocked legitimate
+  // participant typing right after protected content.
+  if (range.collapsed) return false;
+  const endEl = range.endContainer.nodeType === 1 ? range.endContainer : range.endContainer.parentElement;
+  if (endEl && endEl.closest && endEl.closest(OWNER_SELECTOR)) return true;
+  // Non-collapsed selection: walk owner spans and test for real overlap.
   const owners = ctx.editor.querySelectorAll(OWNER_SELECTOR);
   for (const o of owners) {
     if (range.intersectsNode && range.intersectsNode(o)) return true;
@@ -540,11 +548,14 @@ function blockIfProtected(e) {
       toast('space.protect.toast.displace');
       return true;
     }
-    // Enter is allowed. If the caret is inside an owner span, the browser
-    // would clone the span into the new block and the participant would be
-    // trapped (every subsequent input lands inside an empty owner span and
-    // gets blocked). Take over and create a clean block ourselves.
-    if (isInsideOwnerSpan(range.startContainer)) {
+    // Enter is allowed. Whenever the containing block carries any owner
+    // content (whether the caret sits inside the span, right at a boundary,
+    // or just outside in the same block) we take over: the browser would
+    // otherwise clone the inline structure — including `.mz-owner-text` —
+    // into the new block, trapping the caret inside an empty owner span
+    // where every subsequent input is treated as an owner-edit and blocked.
+    const containingBlock = getContainingBlock(range.startContainer);
+    if (containingBlock && containingBlock.querySelector(OWNER_SELECTOR)) {
       if (insertCleanParagraphAfterCaret(range)) {
         e.preventDefault();
         return true;

@@ -2,6 +2,36 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.3] - 2026-05-27
+
+Notfall-Fix zu v1.3.2: Teilnehmer konnten weiterhin nicht in den
+geschuetzten Spaces schreiben, weil mein Enter-Intercept einen zu
+engen Bedingungs-Check hatte und `rangeTouchesOwner` fuer kollabierte
+Carets an Span-Grenzen in einigen Browsern faelschlich `true` lieferte.
+
+### Fixed
+- PROTECT-BUG-09: Mein Enter-Intercept aus 1.3.2 feuerte nur, wenn der
+  Caret laut DOM **in** einem `.mz-owner-text` steckte
+  (`isInsideOwnerSpan(range.startContainer)`). In der Praxis landet
+  der Caret beim Klick ans Ende einer geschuetzten Zeile aber oft
+  **knapp dahinter** (z.B. `(p, 1)` direkt nach der Span, nicht im
+  Textknoten der Span). Dort schlug der Check fehl, der Browser
+  uebernahm Enter selbst und klonte die `mz-owner-text` Span in den
+  neuen Block — Caret im leeren Owner-Span, jeder weitere Input
+  blockiert. Der Intercept feuert jetzt sobald der **umgebende
+  Block** Owner-Inhalt enthaelt, egal wo genau der Caret innerhalb
+  des Blocks sitzt.
+- PROTECT-BUG-10: `rangeTouchesOwner` rief fuer **kollabierte** Carets
+  zusaetzlich `range.intersectsNode(span)` ueber alle Owner-Spans auf.
+  Die WHATWG-Spec macht diesen Check fuer Carets an angrenzenden
+  Boundary-Points uneindeutig — manche Browser-Implementierungen
+  liefern `true` fuer einen Caret direkt nach einer Span. Folge:
+  Tippen in der frisch erzeugten Teilnehmer-Zeile darunter wurde
+  faelschlich blockiert. Fuer kollabierte Carets wird jetzt
+  ausschliesslich `startEl.closest(.mz-owner-text)` genutzt — ein
+  Punkt ausserhalb einer Span beruehrt sie definitionsgemaess nicht.
+  Fuer echte Selektionen bleibt der Walk-Check erhalten.
+
 ## [1.3.2] - 2026-05-27
 
 Folge-Bugfixes am Schutzmodus aus 1.3.1. Zwei Symptome aus dem
