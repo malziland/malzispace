@@ -105,6 +105,7 @@ async function getRoomAuthEntry(room, nowMs) {
     keyProof,
     ownerKeyProof,
     readOnly: !!data.read_only,
+    appendOnly: !!data.append_only,
     cacheUntil: nowMs + WS_AUTH_CACHE_TTL_MS
   };
   roomAuthCache.set(room, entry);
@@ -115,6 +116,17 @@ function broadcastLockState(room, readOnly) {
   const set = rooms.get(room);
   if (!set) return;
   const msg = JSON.stringify({ type: 'lock_state', read_only: !!readOnly });
+  for (const client of set) {
+    if (client.readyState === WebSocket.OPEN) {
+      try { client.send(msg); } catch (e) {}
+    }
+  }
+}
+
+function broadcastAppendOnlyState(room, appendOnly) {
+  const set = rooms.get(room);
+  if (!set) return;
+  const msg = JSON.stringify({ type: 'append_only_state', append_only: !!appendOnly });
   for (const client of set) {
     if (client.readyState === WebSocket.OPEN) {
       try { client.send(msg); } catch (e) {}
@@ -134,6 +146,7 @@ function attachRoomState(room, initial) {
   // read_only:true to read_only:false right after they connected).
   state = {
     readOnly: !!(initial && initial.readOnly),
+    appendOnly: !!(initial && initial.appendOnly),
     ownerKeyProof: (initial && initial.ownerKeyProof) || null,
     listener: null,
     refCount: 1
@@ -145,16 +158,20 @@ function attachRoomState(room, initial) {
         if (!snap.exists) return;
         const data = snap.data() || {};
         const nextReadOnly = !!data.read_only;
+        const nextAppendOnly = !!data.append_only;
         const nextOwnerKeyProof = typeof data.owner_key_proof === 'string' && data.owner_key_proof.length > 0
           ? data.owner_key_proof
           : null;
-        const changed = state.readOnly !== nextReadOnly;
+        const lockChanged = state.readOnly !== nextReadOnly;
+        const protectChanged = state.appendOnly !== nextAppendOnly;
         state.readOnly = nextReadOnly;
+        state.appendOnly = nextAppendOnly;
         state.ownerKeyProof = nextOwnerKeyProof;
         // Auth cache may hold stale owner_key_proof; invalidate so the next
         // connection re-reads it. Existing connections already authenticated.
         roomAuthCache.delete(room);
-        if (changed) broadcastLockState(room, nextReadOnly);
+        if (lockChanged) broadcastLockState(room, nextReadOnly);
+        if (protectChanged) broadcastAppendOnlyState(room, nextAppendOnly);
       },
       (err) => {
         console.error('room state listener error', { room, code: err?.code, message: err?.message });
@@ -259,6 +276,7 @@ wss.on('connection', async (ws, req) => {
   // which read read_only synchronously alongside the key material.
   try {
     ws.send(JSON.stringify({ type: 'lock_state', read_only: !!lockState.readOnly }));
+    ws.send(JSON.stringify({ type: 'append_only_state', append_only: !!lockState.appendOnly }));
   } catch (e) {}
 
   ws.on('pong', () => {
