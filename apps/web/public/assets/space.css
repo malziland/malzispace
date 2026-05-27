@@ -716,6 +716,103 @@ body.is-readonly #editorToolbar [data-action]{
   padding-left: 18px;
 }
 
+/* ── Append-Only protection (v1.3.0) ── */
+/* Owner-authored text highlight. Continuous background; box-shadow underline
+   so adjacent spans render as one seamless region. Hidden when protection
+   is off so the editor looks normal. */
+.mz-owner-text{
+  background: rgba(245,158,11,.15);
+  box-shadow: inset 0 -1px 0 rgba(245,158,11,.35);
+  transition: background .15s ease;
+}
+body:not(.has-append-only) .mz-owner-text{
+  background: transparent;
+  box-shadow: none;
+}
+body.has-append-only:not(.has-owner-ui) .mz-owner-text{
+  cursor: not-allowed;
+}
+
+/* Protect toggle (shield icon) — owner only, parallel to lock-toggle. */
+.protect-toggle{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  color: rgba(255,255,255,.55);
+  transition: color .15s ease, transform .1s ease;
+}
+.protect-toggle:hover{ color: #fff; }
+.protect-toggle:active{ transform: scale(.96); }
+.protect-toggle svg{
+  width: 24px; height: 24px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+}
+.protect-toggle[data-state="on"]{ color: #f59e0b; }
+.protect-toggle[data-state="on"] svg path.fill-when-on{
+  fill: rgba(245,158,11,.22);
+}
+/* Mirror the lock-toggle visibility pattern: owner-only control. */
+body:not(.has-owner-ui) .protect-toggle{ display: none; }
+
+/* Banner shown to both roles while protection is active. */
+.protect-banner{
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .85rem;
+  background: rgba(245,158,11,.08);
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  color: var(--text-hi);
+}
+.protect-banner svg{
+  width: 18px; height: 18px; flex-shrink: 0;
+  fill: none; stroke: #f59e0b; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.protect-banner[hidden]{ display: none !important; }
+.protect-banner-text{ flex: 1; line-height: 1.4; min-width: 0; }
+
+/* Toast for blocked actions. */
+.protect-toast{
+  position: fixed;
+  bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(20,22,30,.96);
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  padding: 12px 18px;
+  color: var(--text-hi);
+  font-size: .9rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+  z-index: 200;
+  display: flex; align-items: center; gap: 10px;
+  max-width: calc(100vw - 32px);
+}
+.protect-toast.is-visible{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.protect-toast svg{
+  width: 18px; height: 18px;
+  fill: none; stroke: #f59e0b; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+@media (max-width: 520px){
+  .protect-toast{ bottom: 16px; padding: 10px 14px; font-size: .82rem; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px){
   .shell{ margin: 20px auto; }

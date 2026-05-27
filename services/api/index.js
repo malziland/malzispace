@@ -523,6 +523,7 @@ router.get('/load', async (req, res) => {
     if (data.content_tag) out.content_tag = data.content_tag;
     out.has_owner = hasStoredOwnerKeyProof(data);
     out.read_only = !!data.read_only;
+    out.append_only = !!data.append_only;
 
     return sendJson(res, 200, out);
   } catch (err) {
@@ -860,6 +861,46 @@ router.post('/presence', async (req, res) => {
     return sendJson(res, 200, { ok: true, count });
   } catch (err) {
     console.error('presence error', err?.code || err?.message);
+    return sendJson(res, 500, { error: 'server_error' });
+  }
+});
+
+router.post('/append-only', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const id = String(body.id || '').trim();
+    if (!ID_RE.test(id)) return sendJson(res, 400, { error: 'invalid_id' });
+    const ip = getClientIp(req);
+    // Mirror the lock endpoint's limiter — same shape, expected to be infrequent.
+    if (!rateLimitMany(res, [
+      { limiter: RL_SAVE_IP, key: `append_only_ip:${ip}` },
+      { limiter: RL_SAVE, key: `append_only:${ip}:${id}` }
+    ])) return;
+
+    const ownerKeyProof = String(body.owner_key_proof || '').trim();
+    if (!KEY_PROOF_RE.test(ownerKeyProof)) return sendJson(res, 400, { error: 'invalid_owner_key_proof' });
+    const desired = !!body.append_only;
+
+    const ref = db.collection('spaces').doc(id);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw Object.assign(new Error('not_found'), { code: 'not_found' });
+      const data = snap.data() || {};
+      if (isExpiredData(data, Date.now())) throw Object.assign(new Error('expired'), { code: 'expired' });
+      if (!hasStoredOwnerKeyProof(data)) throw Object.assign(new Error('no_owner'), { code: 'no_owner' });
+      if (!isOwnerAuthorized(data, ownerKeyProof)) throw Object.assign(new Error('not_owner'), { code: 'not_owner' });
+      tx.update(ref, {
+        append_only: desired,
+        updatedAt: FirestoreFieldValue.serverTimestamp()
+      });
+    });
+    return sendJson(res, 200, { ok: true, append_only: desired });
+  } catch (err) {
+    if (err && err.code === 'not_found') return sendJson(res, 404, { error: 'not_found' });
+    if (err && err.code === 'expired') return sendJson(res, 410, { error: 'expired' });
+    if (err && err.code === 'no_owner') return sendJson(res, 404, { error: 'no_owner' });
+    if (err && err.code === 'not_owner') return sendJson(res, 403, { error: 'read_only_not_owner' });
+    console.error('append-only error', err?.code || err?.message);
     return sendJson(res, 500, { error: 'server_error' });
   }
 });

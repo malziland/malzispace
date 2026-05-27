@@ -2,6 +2,61 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.0] - 2026-05-27
+
+Neuer „Inhalt schuetzen"-Modus (Append-Only): Trainer kann seinen eigenen
+Text gegen Veraenderung durch Teilnehmer schuetzen, waehrend Teilnehmer
+weiterhin frei dazuschreiben und Eigenes editieren koennen. Schalt-,
+Sicht- und Edit-Logik sind unabhaengig von der bestehenden Read-Only-
+Sperre und koennen mit ihr kombiniert werden.
+
+### Added
+- PROTECT-01: Neues Schild-Icon in der Toolbar (nur Owner sichtbar)
+  schaltet den Schutzmodus an/aus. Bei der ersten Aktivierung wird der
+  vorhandene Inhalt rueckwirkend als Trainer-Inhalt markiert
+  (`<span class="mz-owner-text">…</span>`). Jeder weitere Owner-Insert
+  wird automatisch in einen Owner-Span eingewickelt; angrenzende
+  Spans verschmelzen, so dass die Markierung als ein zusammenhaengender
+  gelber Bereich gerendert wird.
+- PROTECT-02: Backend-Endpoint `POST /api/append-only` setzt
+  `append_only` auf dem `spaces`-Dokument (owner-authentifiziert).
+  `/api/load` liefert das Feld an Clients aus. Der collab-relay
+  broadcastet neue Werte via `{type: "append_only_state", append_only: bool}`
+  analog zum bestehenden `lock_state`-Frame.
+- PROTECT-03: Banner unter der Toolbar erklaert den aktiven Modus
+  fuer beide Rollen — rollenabhaengiger Text via i18n.
+- PROTECT-04: Toast-Hinweis unten erscheint kurz, wenn ein Teilnehmer
+  versucht, Trainer-Inhalt zu veraendern. Zwei Texte: „kann nicht
+  veraendert werden" beim Editier-/Loeschversuch innerhalb des
+  Owner-Texts, „darf nicht verschoben werden" beim Verschiebe-Versuch
+  (Enter/Tippen direkt vor einem Owner-Block).
+- PROTECT-05: Neuer E2E-Test `tests/e2e/run_space_protect_e2e.mjs`
+  („npm run test:e2e:protect") deckt initial-state, retroaktive
+  Markierung, Live-Propagation via Relay, Reader-Blockade und
+  Owner-Toggle-off ab.
+
+### Changed
+- LOAD-API-01: `/api/load`-Response enthaelt jetzt das Feld
+  `append_only` (bool). Existing Clients ignorieren unbekannte
+  Felder; aeltere Versionen sehen den Modus daher als „aus".
+
+### Implementation Notes
+- Die Schutzmarkierung lebt als HTML-Klasse `mz-owner-text` direkt im
+  Editor-DOM. Der bestehende `getEditorStoredContent`-Sanitizer
+  behaelt `class`-Attribute bei und entfernt Spans mit Klassen
+  *nicht*, womit die Markierung automatisch durch Y.Text/CRDT-Sync
+  transportiert wird — kein neues Yjs-Attribut noetig.
+- Editor-Interception sitzt in `editor/protect-guard.js` und nutzt
+  `beforeinput` + `getTargetRanges()` als zentralen Hook. Damit
+  werden Backspace/Delete an Span-Grenzen korrekt abgefangen
+  (Standard-Selection allein reicht dafuer nicht) und Mobile
+  iOS/Android-Software-Tastaturen abgedeckt, weil sie ueber
+  `beforeinput` statt `keydown` operieren.
+- Lock + Protect: Lock gewinnt visuell (Editor read-only fuer Reader),
+  Protect bleibt im Hintergrund aktiv und reaktiviert sich beim
+  Entsperren — keine Sonderlogik noetig, weil der Guard nur greift
+  wenn der Editor editierbar ist.
+
 ## [1.2.1] - 2026-05-17
 
 Owner-Lock-Iteration nach Initial-1.2.0: UX-Politur, Owner-Link aus der

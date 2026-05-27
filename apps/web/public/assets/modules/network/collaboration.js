@@ -463,6 +463,10 @@ function handleControlFrame(rawText) {
       if (typeof ctx.applyLockState === 'function') {
         ctx.applyLockState({ readOnly: !!msg.read_only });
       }
+    } else if (msg.type === 'append_only_state') {
+      if (typeof ctx.applyProtectState === 'function') {
+        ctx.applyProtectState({ appendOnly: !!msg.append_only });
+      }
     }
   } catch (e) {}
 }
@@ -703,6 +707,9 @@ async function legacyLoadAndRender(options = {}) {
   if (res.error) return null;
   if (typeof ctx.applyLockState === 'function') {
     ctx.applyLockState({ readOnly: !!res.read_only, hasOwner: !!res.has_owner });
+  }
+  if (typeof ctx.applyProtectState === 'function') {
+    ctx.applyProtectState({ appendOnly: !!res.append_only });
   }
   let content = '';
   if (res.zk) {
