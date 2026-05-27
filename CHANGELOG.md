@@ -2,6 +2,54 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.2] - 2026-05-27
+
+Folge-Bugfixes am Schutzmodus aus 1.3.1. Zwei Symptome aus dem
+Live-Test wurden behoben: Teilnehmer landeten nach Enter in einer
+leeren Owner-Span und konnten weder tippen noch loeschen; und vom
+Owner per Strg+V eingefuegter Text war nicht als Owner-Inhalt
+markiert, sodass der Schutz fuer Pasted-Content bis zum naechsten
+Frei→Schutz-Toggle nicht griff.
+
+### Fixed
+- PROTECT-BUG-05: Wenn der Teilnehmer am Ende einer Owner-Span Enter
+  drueckt, klont der Browser die Inline-Struktur in den neuen Block.
+  Der Cursor saass in einer leeren `.mz-owner-text` Span und jeder
+  weitere `insertText` / `deleteContent*` wurde als Edit am
+  Trainer-Text gewertet und blockiert. Der `protect-guard` uebernimmt
+  jetzt die Erzeugung des neuen Blocks selbst, wenn der Cursor in
+  einer Owner-Span steht, und positioniert den Caret im frischen
+  Block ausserhalb jeder Owner-Markierung
+  (`insertCleanParagraphAfterCaret`). Damit funktioniert das Tippen
+  in der neuen Zeile sofort.
+- PROTECT-BUG-06: Backspace/Delete auf einer leeren, vom Teilnehmer
+  gerade angelegten Zeile war pauschal blockiert, weil die zugehoerige
+  Target-Range die benachbarte Owner-Span beruehrt. Der Guard
+  erkennt jetzt rein-leere Teilnehmer-Bloecke
+  (`deleteEmptyParticipantBlock`) und entfernt nur den leeren Block
+  ohne den Owner-Inhalt anzufassen. Der Caret wird auf dem
+  Nachbarblock ausserhalb der Owner-Span platziert.
+- PROTECT-BUG-07: Owner pasted Inhalt waehrend Schutz an war kam als
+  unmarkierter HTML-Fragment in den Editor; Teilnehmer konnten den
+  frisch eingefuegten Text frei editieren bis der Owner einmal
+  Frei→Schutz toggelte (was `markAllExistingAsOwner` ausloeste).
+  `editor/clipboard.js` umhuellt jetzt jeden Pasted-Block in eine
+  Owner-Span (oder bei reinem Inline-Fragment einen einzigen Wrap),
+  sobald `ctx.appendOnly && ctx.isOwner` gilt
+  (`wrapPasteAsOwner`). Pasted-Content ist damit ab dem ersten
+  Render Teil des Schutzes.
+- PROTECT-BUG-08: Teilnehmer klickte unten in den Editor um zu
+  schreiben; der Caret landete automatisch im letzten Textknoten
+  der letzten Owner-Span (= "innerhalb von Owner-Inhalt") und jeder
+  Tastenanschlag wurde mit "Trainer-Inhalt kann nicht veraendert
+  werden" geblockt. `findOwnerBoundary` erkennt jetzt, ob der Caret
+  exakt auf der End-Grenze einer Owner-Span sitzt (also direkt nach
+  dem letzten Zeichen, kein weiterer Owner-Inhalt im selben Block
+  dahinter), und `insertTextAtOwnerBoundary` schreibt den Text in
+  einen Geschwister-Textknoten ausserhalb der Span. Der Teilnehmer
+  kann jetzt direkt am Ende der geschuetzten Bloecke lostippen,
+  ohne erst Enter druecken zu muessen.
+
 ## [1.3.1] - 2026-05-27
 
 UX-Iteration und Bugfixes am Append-Only-Schutz aus v1.3.0. Die zwei

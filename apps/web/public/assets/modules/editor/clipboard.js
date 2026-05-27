@@ -16,6 +16,9 @@ import {
 import { pushUndoSnapshot } from '../services/history.js';
 import { normalizeEditorMarkupPreserveSelection } from './inline-format.js';
 
+const OWNER_TEXT_CLASS = 'mz-owner-text';
+const OWNER_SELECTOR = '.' + OWNER_TEXT_CLASS;
+
 // ── Text copying ────────────────────────────────────────────────
 
 /** Copy plain text to the clipboard (with fallback). */
@@ -49,6 +52,51 @@ export function prepareHtmlForClipboard(html) {
     });
   });
   return '<div style="color:#000">' + tpl.innerHTML + '</div>';
+}
+
+/**
+ * Wrap unmarked text in a sanitized paste fragment with `.mz-owner-text` so
+ * that owner-pasted content is protected immediately (no off→on retoggle
+ * required). Idempotent: text already inside an owner span is left alone.
+ */
+function wrapPasteAsOwner(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const BLOCK_SEL = 'p,div,li,blockquote,h1,h2,h3,h4,h5,h6';
+  const blocks = tpl.content.querySelectorAll(BLOCK_SEL);
+  if (blocks.length === 0) {
+    if ((tpl.content.textContent || '').trim()) {
+      const span = document.createElement('span');
+      span.className = OWNER_TEXT_CLASS;
+      while (tpl.content.firstChild) span.appendChild(tpl.content.firstChild);
+      tpl.content.appendChild(span);
+    }
+    return tpl.innerHTML;
+  }
+  for (const block of blocks) {
+    if (!(block.textContent || '').trim()) continue;
+    const hasOwner = !!block.querySelector(OWNER_SELECTOR);
+    if (hasOwner) {
+      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      for (const tn of textNodes) {
+        if (!(tn.textContent || '').trim()) continue;
+        const parent = tn.parentElement;
+        if (!parent || parent.closest(OWNER_SELECTOR)) continue;
+        const wrap = document.createElement('span');
+        wrap.className = OWNER_TEXT_CLASS;
+        parent.insertBefore(wrap, tn);
+        wrap.appendChild(tn);
+      }
+    } else {
+      const span = document.createElement('span');
+      span.className = OWNER_TEXT_CLASS;
+      while (block.firstChild) span.appendChild(block.firstChild);
+      block.appendChild(span);
+    }
+  }
+  return tpl.innerHTML;
 }
 
 /** Copy rich text (HTML + plain text) to the clipboard. */
@@ -184,6 +232,12 @@ function handlePaste(evt) {
     sanitized = plainTextToHtml(plain);
   }
   if (!sanitized) return;
+
+  // Owner pasting while protect is on must produce owner-marked content;
+  // otherwise the paste lands unprotected until the next retro-mark.
+  if (ctx.appendOnly && ctx.isOwner) {
+    sanitized = wrapPasteAsOwner(sanitized);
+  }
 
   const sel = window.getSelection && window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
