@@ -189,18 +189,25 @@ async function onSegmentClick(targetMode) {
       ctx.applyLockState({ readOnly: wantLocked });
     }
 
-    // Step 3: retroactively mark unmarked content when activating protect.
+    // Step 3: retroactively mark unmarked content ONLY on the very first
+    // protect activation in this space — when no owner markup exists yet.
+    // Mirrors the v1.3.0 protect.js behaviour: re-marking on every Schutz
+    // click would swallow whatever participants typed while protect was
+    // off into the protected region (user complaint 2026-05-27).
     if (wantProtected) {
-      const didMark = markAllExistingAsOwner();
-      if (didMark) {
-        try {
-          const collab = await import('../network/collaboration.js');
-          const { getEditorStoredContent } = await import('../services/selection.js');
-          collab.syncYTextFromEditorHtml(getEditorStoredContent());
-          if (typeof collab.saveNow === 'function') {
-            await collab.saveNow();
-          }
-        } catch (e) {}
+      const hasAnyOwner = !!(ctx.editor && ctx.editor.querySelector(OWNER_SELECTOR));
+      if (!hasAnyOwner) {
+        const didMark = markAllExistingAsOwner();
+        if (didMark) {
+          try {
+            const collab = await import('../network/collaboration.js');
+            const { getEditorStoredContent } = await import('../services/selection.js');
+            collab.syncYTextFromEditorHtml(getEditorStoredContent());
+            if (typeof collab.saveNow === 'function') {
+              await collab.saveNow();
+            }
+          } catch (e) {}
+        }
       }
     }
 

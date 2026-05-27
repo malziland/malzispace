@@ -165,6 +165,10 @@ function toast(messageKey) {
   if (typeof ctx.showProtectToast === 'function') ctx.showProtectToast(messageKey);
 }
 
+function diag(label) {
+  if (typeof ctx.logGuardEvent === 'function') ctx.logGuardEvent(label);
+}
+
 function isInsideOwnerSpan(node) {
   const el = node && node.nodeType === 3 ? node.parentElement : node;
   return !!(el && el.closest && el.closest(OWNER_SELECTOR));
@@ -369,17 +373,30 @@ function insertTextAtOwnerBoundary(boundary, text) {
 // ── Owner-mode: wrap typed text in `.mz-owner-text` ─────────────
 
 function wrapOwnerInsert(e) {
-  if (!ctx.appendOnly || !ctx.isOwner) return false;
-  if (e.inputType !== 'insertText' || !e.data) return false;
+  if (!ctx.appendOnly || !ctx.isOwner) {
+    if (ctx.isOwner && e.inputType === 'insertText') {
+      diag(`owner.skip(appendOnly=${ctx.appendOnly}) "${e.data}"`);
+    }
+    return false;
+  }
+  if (e.inputType !== 'insertText' || !e.data) {
+    if (e.inputType && e.inputType.startsWith('insert')) {
+      diag(`owner.skip(inputType=${e.inputType})`);
+    }
+    return false;
+  }
 
   const range = currentRange();
-  if (!range) return false;
+  if (!range) { diag('owner.skip(no-range)'); return false; }
 
   const node = range.startContainer;
   const parent = node.nodeType === 1 ? node : node.parentElement;
   // Already inside an owner span → let the browser insert normally so the
   // text becomes part of the existing span.
-  if (parent && parent.closest && parent.closest(OWNER_SELECTOR)) return false;
+  if (parent && parent.closest && parent.closest(OWNER_SELECTOR)) {
+    diag(`owner.passthrough(in-span) "${e.data}"`);
+    return false;
+  }
 
   // Find an adjacent owner span to merge into.
   let mergeTarget = null;
@@ -448,6 +465,7 @@ function wrapOwnerInsert(e) {
   }
   // Manually fire an input event so the existing autosave/CRDT-sync pipeline runs.
   ctx.editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: e.data }));
+  diag(`owner.wrap "${e.data}"`);
   return true;
 }
 
@@ -457,7 +475,7 @@ function blockIfProtected(e) {
   if (!ctx.appendOnly || ctx.isOwner) return false;
   const it = e.inputType || '';
   const range = currentRange();
-  if (!range) return false;
+  if (!range) { diag(`part.skip(no-range/${it})`); return false; }
 
   const isParaCreating = it === 'insertParagraph' || it === 'insertLineBreak';
   const isTextInsert = it === 'insertText' || it === 'insertFromPaste'
@@ -473,6 +491,7 @@ function blockIfProtected(e) {
     // surrounding owner content.
     if (isDelete && range.collapsed && deleteEmptyParticipantBlock(range, it)) {
       e.preventDefault();
+      diag(`part.delete-empty-block(${it})`);
       return true;
     }
     const targets = e.getTargetRanges ? e.getTargetRanges() : [];
@@ -485,12 +504,14 @@ function blockIfProtected(e) {
       if (rangeTouchesOwner(r)) {
         e.preventDefault();
         toast('space.protect.toast.modify');
+        diag(`part.block-modify(${it}, target-range)`);
         return true;
       }
     }
     if (rangeTouchesOwner(range)) {
       e.preventDefault();
       toast('space.protect.toast.modify');
+      diag(`part.block-modify(${it}, caret)`);
       return true;
     }
   }
@@ -514,18 +535,22 @@ function blockIfProtected(e) {
         if (boundary && boundary.position === 'after' && !ownerInSameBlockAfterCursor(range)) {
           e.preventDefault();
           insertTextAtOwnerBoundary(boundary, e.data);
+          diag(`part.redirect-after(${it}) "${e.data}"`);
           return true;
         }
       }
       e.preventDefault();
       toast('space.protect.toast.modify');
+      diag(`part.block-modify(${it})`);
       return true;
     }
     if (ownerInSameBlockAfterCursor(range)) {
       e.preventDefault();
       toast('space.protect.toast.displace');
+      diag(`part.block-displace(${it})`);
       return true;
     }
+    diag(`part.pass(${it}) "${e.data || ''}"`);
   }
 
   // 3) Paragraph creation. Three failure modes:
@@ -558,9 +583,11 @@ function blockIfProtected(e) {
     if (containingBlock && containingBlock.querySelector(OWNER_SELECTOR)) {
       if (insertCleanParagraphAfterCaret(range)) {
         e.preventDefault();
+        diag('part.clean-newline');
         return true;
       }
     }
+    diag('part.pass-enter');
   }
   return false;
 }

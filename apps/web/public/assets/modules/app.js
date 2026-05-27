@@ -26,6 +26,7 @@ import { initLock } from './ui/lock.js';
 import { initProtect } from './ui/protect.js';
 import { initMode } from './ui/mode.js';
 import { initProtectGuard } from './editor/protect-guard.js';
+import { initProtectDiag } from './dev/protect-diag.js';
 import { initCollaboration, init, saveNow } from './network/collaboration.js';
 import { copyRichText, setButtonCopiedState } from './editor/clipboard.js';
 import { storedContentToHtml } from './services/sanitizer.js';
@@ -89,6 +90,7 @@ initLock();
 initProtect();
 initMode();
 initProtectGuard();
+initProtectDiag();
 initCollaboration();
 
 // ── Color pickers ───────────────────────────────────────────────

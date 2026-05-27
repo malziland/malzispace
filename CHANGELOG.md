@@ -2,6 +2,32 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.4] - 2026-05-27
+
+Regression aus dem 3-Stufen-Mode-Switch (v1.3.1) korrigiert plus
+Live-Diagnose-Panel fuer Schutz-Bugs ohne DevTools.
+
+### Fixed
+- PROTECT-BUG-11: `mode.js` rief `markAllExistingAsOwner` bei **jedem**
+  Klick auf "Schutz" auf — egal ob im Space bereits Owner-Inhalt
+  existierte. Folge: wenn der Trainer auf "Frei" schaltete, der
+  Teilnehmer etwas tippte, und der Trainer wieder auf "Schutz" ging,
+  wurde der Teilnehmer-Text faelschlich als Trainer-Inhalt markiert
+  und protected. Mirrors jetzt das `protect.js`-Verhalten aus v1.3.0:
+  retroaktive Markierung laeuft nur, wenn aktuell **keine**
+  `.mz-owner-text` Span im Editor existiert. Ist die Grenze einmal
+  gezogen, bleibt sie stehen.
+
+### Added
+- DIAG-01: Live-Diagnose-Panel oben rechts (URL um `?diag=1` ergaenzen,
+  z.B. `https://malzispace.web.app/space.html?id=...&diag=1#...`).
+  Zeigt `ctx.isOwner`, `ctx.appendOnly`, `ctx.readOnly`, Editor
+  editable-Status, Anzahl `.mz-owner-text` Spans im Editor und das
+  Ergebnis des letzten `beforeinput`-Events (wrap / passthrough /
+  block-modify / redirect / clean-newline). Ueber `protect-diag.js`,
+  inert ohne den Query-Parameter. Macht den Status der Schutz-Logik
+  ohne Browser-DevTools sichtbar.
+
 ## [1.3.3] - 2026-05-27
 
 Notfall-Fix zu v1.3.2: Teilnehmer konnten weiterhin nicht in den
