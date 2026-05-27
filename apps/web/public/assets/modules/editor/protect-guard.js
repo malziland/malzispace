@@ -564,6 +564,21 @@ function blockIfProtected(e) {
       diag(`part.block-modify(${it})`);
       return true;
     }
+    // Wedged between two trainer regions: the caret sits outside any owner
+    // span, BUT its containing block already has owner content AND more
+    // trainer content follows in a later block. Typing here would let the
+    // participant extend a piece of plain text that lives in the gap of a
+    // trainer paragraph — exactly what user demoed 2026-05-27 line 11
+    // ("Schüler:in 4: hnhgnghnhbgnghn"). Block it. Note: an empty block
+    // (no owner content of its own) sitting between two trainer blocks
+    // does NOT match this condition and remains writable.
+    const blockHere = getContainingBlock(range.startContainer);
+    if (blockHere && blockHere.querySelector(OWNER_SELECTOR) && laterBlockHasOwner(range)) {
+      e.preventDefault();
+      toast('space.protect.toast.modify');
+      diag(`part.block-wedged(${it})`);
+      return true;
+    }
     // Same-block displacement: typing here would push owner content right
     // within the SAME block. Cross-block typing (e.g. in an empty line that
     // sits between two trainer blocks) is fine — it doesn't push the next

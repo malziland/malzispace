@@ -2,6 +2,19 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.6] - 2026-05-27
+
+### Fixed
+- PROTECT-BUG-13: Wenn der Teilnehmer vor v1.3.5 Muell-Text neben einen
+  Trainer-Header geschrieben hatte (Plain-Text-Sibling der Owner-Span im
+  selben Block), konnte er den eigenen Text weiterhin erweitern — der
+  Cursor stand jetzt nicht mehr IN der Owner-Span, sondern daneben, und
+  meine 1.3.5-Logik pruefte nur `ownerInSameBlockAfterCursor`. Neue
+  Bedingung: enthaelt der umgebende Block Owner-Inhalt **und** folgt
+  spaeter noch ein Trainer-Block, wird das Tippen mit
+  `space.protect.toast.modify` blockiert. Ein leerer Block zwischen zwei
+  Trainer-Bloecken bleibt schreibbar (keine Owner-Span im Block selbst).
+
 ## [1.3.5] - 2026-05-27
 
 Praezisierung der Schutz-Regel nach User-Feedback: Teilnehmer darf
