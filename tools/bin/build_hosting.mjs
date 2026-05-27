@@ -2,6 +2,10 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileP = promisify(execFile);
 
 const ROOT_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 const SRC_DIR = path.join(ROOT_DIR, 'apps', 'web', 'public');
@@ -116,8 +120,39 @@ async function rewriteTextFiles(manifest) {
   }
 }
 
+/**
+ * Run `node --check` on every JS/MJS source file. Bails out before any
+ * fingerprinting or copying happens so a syntax error never reaches the
+ * build/ tree, much less production. Native module resolution is bypassed
+ * by --check, so the relative-import paths in our ES modules don't matter.
+ */
+async function syntaxCheckSources(sourceFiles) {
+  const jsFiles = sourceFiles.filter((rel) => {
+    const ext = path.posix.extname(rel).toLowerCase();
+    return ext === '.js' || ext === '.mjs';
+  });
+  const failures = [];
+  for (const rel of jsFiles) {
+    const abs = path.join(SRC_DIR, rel);
+    try {
+      await execFileP(process.execPath, ['--check', abs], { maxBuffer: 8 * 1024 * 1024 });
+    } catch (err) {
+      failures.push({ rel, stderr: String(err.stderr || err.message || err).trim() });
+    }
+  }
+  if (failures.length) {
+    console.error(`Syntax check failed for ${failures.length} file(s):`);
+    for (const f of failures) {
+      console.error(`\n--- ${f.rel} ---\n${f.stderr}`);
+    }
+    throw new Error('syntax_check_failed');
+  }
+  console.log(`Syntax check passed for ${jsFiles.length} JS file(s).`);
+}
+
 async function main() {
   const sourceFiles = await walk(SRC_DIR);
+  await syntaxCheckSources(sourceFiles);
   await copySourceTree(sourceFiles);
   const manifest = await fingerprintFiles(sourceFiles);
   await rewriteTextFiles(manifest);

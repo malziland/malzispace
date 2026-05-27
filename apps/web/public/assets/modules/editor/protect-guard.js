@@ -39,10 +39,71 @@ function rangeTouchesOwner(range) {
   return false;
 }
 
+const BLOCK_TAGS = /^(P|DIV|LI|H[1-6]|BLOCKQUOTE)$/i;
+
+function getContainingBlock(node) {
+  let n = node && node.nodeType === 3 ? node.parentElement : node;
+  while (n && n !== ctx.editor && !BLOCK_TAGS.test(n.tagName || '')) n = n.parentElement;
+  return (n && n !== ctx.editor) ? n : null;
+}
+
 /**
- * True if the first significant content AFTER the collapsed cursor is an
- * owner-marked element — meaning any insertion at this position would push
- * the owner content down or to the right.
+ * True if owner-marked content lives in the SAME block as the cursor and
+ * comes after the cursor — i.e. typing here would shove that owner content
+ * to the right within the same line. Used to gate `insertText`.
+ *
+ * Allows typing in empty paragraphs that sit between owner-marked blocks,
+ * because filling a blank line doesn't displace anything.
+ */
+/**
+ * True if the cursor is inside an owner span AND owner content remains after
+ * the cursor within that same span. Used to keep `insertParagraph` from
+ * splitting trainer text mid-word, while still allowing Enter at the very
+ * end of an owner span (where it creates a new paragraph cleanly).
+ */
+function cursorInsideOwnerWithContentAfter(range) {
+  if (!range || !range.collapsed) return false;
+  const node = range.startContainer;
+  const el = node && node.nodeType === 3 ? node.parentElement : node;
+  const span = el && el.closest ? el.closest(OWNER_SELECTOR) : null;
+  if (!span) return false;
+  // Build a range from the cursor to the very end of the span.
+  let lastDescendant = span;
+  while (lastDescendant.lastChild) lastDescendant = lastDescendant.lastChild;
+  const tail = document.createRange();
+  try {
+    tail.setStart(range.startContainer, range.startOffset);
+    if (lastDescendant.nodeType === 3) {
+      tail.setEnd(lastDescendant, (lastDescendant.textContent || '').length);
+    } else {
+      tail.setEndAfter(lastDescendant);
+    }
+  } catch (err) { return false; }
+  return (tail.toString() || '').length > 0;
+}
+
+function ownerInSameBlockAfterCursor(range) {
+  if (!range || !range.collapsed) return false;
+  const block = getContainingBlock(range.startContainer);
+  if (!block) return false;
+  const owners = block.querySelectorAll(OWNER_SELECTOR);
+  if (!owners.length) return false;
+  for (const o of owners) {
+    const cmp = range.compareBoundaryPoints(Range.START_TO_START, (() => {
+      const r = document.createRange();
+      r.selectNode(o);
+      return r;
+    })());
+    // cursor is BEFORE the owner span's start
+    if (cmp <= 0) return true;
+  }
+  return false;
+}
+
+/**
+ * True if the first significant content AFTER the collapsed cursor (across
+ * block boundaries) is owner-marked. Used to gate paragraph-creating events
+ * like Enter, which push everything below down a line.
  */
 function nextContentIsOwner(range) {
   if (!range || !range.collapsed) return false;
@@ -185,40 +246,74 @@ function wrapOwnerInsert(e) {
 
 function blockIfProtected(e) {
   if (!ctx.appendOnly || ctx.isOwner) return false;
+  const it = e.inputType || '';
+  const range = currentRange();
+  if (!range) return false;
 
-  // 1) Check what the browser is about to modify (Backspace/Delete know exactly
-  // which character range will be removed).
-  const targets = e.getTargetRanges ? e.getTargetRanges() : [];
-  for (const sr of targets) {
-    const r = document.createRange();
-    try {
-      r.setStart(sr.startContainer, sr.startOffset);
-      r.setEnd(sr.endContainer, sr.endOffset);
-    } catch (err) { continue; }
-    if (rangeTouchesOwner(r)) {
+  const isParaCreating = it === 'insertParagraph' || it === 'insertLineBreak';
+  const isTextInsert = it === 'insertText' || it === 'insertFromPaste'
+    || it === 'insertFromDrop' || it === 'insertReplacementText';
+  const isFormat = it.startsWith('format');
+  const isDelete = it.startsWith('delete');
+
+  // 1) Deletion / format: block when target ranges (what the browser is about
+  // to modify) overlap owner content, or when the cursor itself sits on it.
+  if (isDelete || isFormat) {
+    const targets = e.getTargetRanges ? e.getTargetRanges() : [];
+    for (const sr of targets) {
+      const r = document.createRange();
+      try {
+        r.setStart(sr.startContainer, sr.startOffset);
+        r.setEnd(sr.endContainer, sr.endOffset);
+      } catch (err) { continue; }
+      if (rangeTouchesOwner(r)) {
+        e.preventDefault();
+        toast('space.protect.toast.modify');
+        return true;
+      }
+    }
+    if (rangeTouchesOwner(range)) {
       e.preventDefault();
       toast('space.protect.toast.modify');
       return true;
     }
   }
 
-  const range = currentRange();
-  if (!range) return false;
-
-  // 2) Current cursor sits inside owner-marked content → block ANY input.
-  if (rangeTouchesOwner(range)) {
-    e.preventDefault();
-    toast('space.protect.toast.modify');
-    return true;
+  // 2) Text insertion. Block when typing would extend the owner span itself
+  // (cursor inside or at boundary) or shove same-line owner content right.
+  if (isTextInsert) {
+    if (rangeTouchesOwner(range)) {
+      e.preventDefault();
+      toast('space.protect.toast.modify');
+      return true;
+    }
+    if (ownerInSameBlockAfterCursor(range)) {
+      e.preventDefault();
+      toast('space.protect.toast.displace');
+      return true;
+    }
   }
 
-  // 3) Displacement guard: an insertion immediately before an owner-marked block
-  // would push it down/right.
-  const isInserting = e.inputType.startsWith('insert') || e.inputType.startsWith('format');
-  if (isInserting && nextContentIsOwner(range)) {
-    e.preventDefault();
-    toast('space.protect.toast.displace');
-    return true;
+  // 3) Paragraph creation. Three failure modes:
+  //   a) Cursor mid-span with owner content still ahead → Enter would split
+  //      trainer text into two paragraphs. Block.
+  //   b) Owner content lives later in the document → Enter pushes it down.
+  //      Block (handled by nextContentIsOwner).
+  //   c) Owner content is in the same block to the right of the cursor → Enter
+  //      would still split the line. Block (handled by ownerInSameBlockAfterCursor).
+  // Enter at the end of an owner span — where no owner content follows — is
+  // explicitly allowed so participants can drop a fresh line below.
+  if (isParaCreating) {
+    if (cursorInsideOwnerWithContentAfter(range)) {
+      e.preventDefault();
+      toast('space.protect.toast.modify');
+      return true;
+    }
+    if (nextContentIsOwner(range) || ownerInSameBlockAfterCursor(range)) {
+      e.preventDefault();
+      toast('space.protect.toast.displace');
+      return true;
+    }
   }
   return false;
 }

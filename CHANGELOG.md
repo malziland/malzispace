@@ -2,6 +2,85 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.1] - 2026-05-27
+
+UX-Iteration und Bugfixes am Append-Only-Schutz aus v1.3.0. Die zwei
+einzelnen Icon-Buttons (Schloss + Schild) wurden zu einem segmentierten
+Schalter mit drei Stufen zusammengefasst. Ein eigener Build-Pre-Check
+verhindert ab jetzt, dass JavaScript-Syntaxfehler je wieder live gehen.
+
+### Added
+- MODE-SWITCH-01: Neuer 3-Stufen-Schalter `Frei | Schutz | Sperre`
+  ersetzt die einzelnen Schild- und Schloss-Buttons fuer den Owner.
+  Klar erkennbarer Aktiv-Zustand (gruen / orange / rot), gegenseitig
+  ausschliessend, ein Klick reicht. `apps/web/public/assets/modules/ui/mode.js`
+  orchestriert die zwei darunterliegenden Endpoints `/api/lock` und
+  `/api/append-only` und reagiert auf beide Relay-Frames.
+- MODE-SWITCH-02: Lock-Banner fuer Teilnehmer (rote Variante des
+  Schutz-Banners). Wenn der Trainer den Space sperrt, sehen Teilnehmer
+  jetzt nicht nur das rote Schloss-Icon sondern auch eine Erklaerung
+  unter der Toolbar — konsistent mit dem Schutz-Banner.
+- MODE-SWITCH-03: Passiver Schild-Indikator fuer Teilnehmer bei
+  aktivem Schutz. Spiegelt das Verhalten des read-only Schloss-Icons
+  und macht den Zustand auch in der Toolbar sichtbar (Banner allein
+  war je nach Scroll-Position weg).
+- AUTO-MARK-01: One-shot Auto-Markierung beim Oeffnen bestehender
+  Spaces. Wenn der Owner einen Space oeffnet wo Schutz aktiv ist aber
+  der Inhalt nicht markiert ist (z.B. weil er vor dem Fix aktiviert
+  wurde), wird der vorhandene Text rueckwirkend in `.mz-owner-text`
+  eingewickelt und ueber CRDT + saveNow synchronisiert.
+- BUILD-CHECK-01: `tools/bin/build_hosting.mjs` ruft `node --check`
+  ueber alle JS-Quellen auf, bevor der Build den Asset-Tree faengt.
+  Ein Syntaxfehler bricht den Build sofort ab, das fehlerhafte File
+  wird benannt — keine Chance, defektes JavaScript zu deployen.
+
+### Changed
+- MOBILE-01: Toolbar-Layout fuer schmale Viewports neu aufgebaut.
+  Mode-Switch belegt jetzt eine eigene volle Breite-Zeile mit gleich
+  grossen Segmenten. Owner-Link und Lese-Link Buttons sind kompakt
+  aber **mit Label** dargestellt — vorher nur Icons, was zu
+  Verwechslungsgefahr gefuehrt hat.
+- I18N-PROTECT-01: Drei neue String-Bloecke hinzugefuegt:
+  - `space.mode.*` fuer den Schalter selbst (Tooltip + Label je Segment)
+  - `space.lock.banner.*` fuer die Sperre-Banner-Texte (Trainer/Teilnehmer)
+  - `space.protect.readOnly` fuer den Hover-Text des passiven Schild-Indikators
+
+### Fixed
+- PROTECT-BUG-01: Wenn protect aktiviert wurde, lief `markAllExistingAsOwner`
+  nur ueber die obersten Editor-Bloecke und nur beim allerersten Toggle.
+  Spaces mit gemischtem oder bereits einmal getoggelten Inhalt
+  blieben unmarkiert. Logik wurde umgestellt: bei jeder Aktivierung
+  wird jeder Block geprueft und entweder vollstaendig oder
+  Text-Knoten-weise nachmarkiert. Nach dem Markieren wird ein
+  `saveNow()` (kein debouncted `queueSave`) erzwungen, damit das
+  naechste `/api/load` den korrekten Stand liefert.
+- PROTECT-BUG-02: Optimistic UI-Update setzte `ctx.appendOnly` vor
+  der Server-Anfrage, wodurch die anschliessende Vergleichspruefung
+  `Boolean(ctx.appendOnly) !== wantProtected` immer `false` ergab
+  und `postAppendOnly` nie aufgerufen wurde. Der originale Zustand
+  wird jetzt vor dem optimistischen Apply als `wasProtected` /
+  `wasLocked` festgehalten und die API-Aufrufe vergleichen gegen
+  diesen Snapshot.
+- PROTECT-BUG-03: Verschiebung-Sperre des Editor-Guards war zu
+  aggressiv und blockierte auch Tippen in leeren Zeilen zwischen
+  Trainer-Bloecken. `insertText` und `insertParagraph` werden jetzt
+  getrennt behandelt: `insertText` blockiert nur wenn Owner-Text in
+  derselben Zeile rechts vom Cursor liegt, `insertParagraph` nur wenn
+  spaeter im Dokument noch Owner-Inhalt folgt.
+- PROTECT-BUG-04: Enter direkt am Ende eines Owner-Spans war pauschal
+  blockiert obwohl es keinen Trainer-Text verschiebt. Eigene Bedingung
+  `cursorInsideOwnerWithContentAfter` unterscheidet jetzt zwischen
+  Cursor mittendrin (Split-Gefahr → blockiert) und Cursor am Ende
+  (saubere neue Zeile darunter → erlaubt).
+
+### Defensive
+- CSS-SAFETY-01: Zusaetzliche CSS-Regel
+  `body.has-append-only:not(.has-owner-ui) #protectToggle`
+  erzwingt die Sichtbarkeit des Teilnehmer-Schild-Indikators per
+  Specificity, falls JavaScript aus irgendeinem Grund das `hidden`-
+  Attribut nicht aktualisiert haben sollte. Belt-and-suspenders fuer
+  Zustaende die das Banner zeigen aber das Toolbar-Icon nicht.
+
 ## [1.3.0] - 2026-05-27
 
 Neuer „Inhalt schuetzen"-Modus (Append-Only): Trainer kann seinen eigenen

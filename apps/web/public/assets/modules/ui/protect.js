@@ -28,10 +28,19 @@ function updateProtectButtonUi() {
   if (!protectButton) return;
   // Visibility: same model as the existing copy-owner button — owner only.
   if (!ctx.isOwner) {
-    protectButton.hidden = true;
+    // Participant indicator: visible only while protect is active, passive
+    // (no clicks). Mirrors the readonly lock-toggle indicator pattern so the
+    // toolbar surfaces lock + protect state consistently across roles.
+    protectButton.hidden = !ctx.appendOnly;
+    protectButton.setAttribute('data-state', ctx.appendOnly ? 'readonly' : 'off');
+    const label = t('space.protect.readOnly');
+    protectButton.setAttribute('aria-label', label);
+    protectButton.setAttribute('title', label);
+    protectButton.disabled = true;
     return;
   }
   protectButton.hidden = false;
+  protectButton.disabled = false;
   const on = !!ctx.appendOnly;
   protectButton.setAttribute('data-state', on ? 'on' : 'off');
   const labelKey = on ? 'space.protect.toggleOn' : 'space.protect.toggleOff';
@@ -74,6 +83,7 @@ export function applyProtectState({ appendOnly } = {}) {
   setBodyClasses();
   updateProtectButtonUi();
   updateBannerUi();
+  if (typeof ctx.refreshMode === 'function') ctx.refreshMode();
 }
 
 /**

@@ -152,6 +152,7 @@ export function applyLockState({ readOnly, hasOwner } = {}) {
   updateLockButtonUi();
   updateEditorAccess();
   maybeShowOwnerWelcome();
+  if (typeof ctx.refreshMode === 'function') ctx.refreshMode();
 }
 
 async function postLock(desiredReadOnly) {

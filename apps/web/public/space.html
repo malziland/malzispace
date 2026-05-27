@@ -30,6 +30,23 @@
         <span id="titleLabel" class="title-label" hidden data-i18n="space.title.label">Titel</span>
         <span id="titleView" class="title" hidden></span>
         <div class="toolbar-actions">
+          <div id="modeSwitch" class="mode-switch" role="radiogroup" aria-label="Schreibmodus" data-i18n-aria-label="space.mode.label" hidden>
+            <button type="button" class="mode-segment" data-mode="open" role="radio" aria-checked="true" title="Frei — alle dürfen alles bearbeiten" data-i18n-title="space.mode.open.hint">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/></svg>
+              <span class="mode-segment-label" data-i18n="space.mode.open.label">Frei</span>
+            </button>
+            <button type="button" class="mode-segment" data-mode="protect" role="radio" aria-checked="false" title="Schutz — Trainer-Inhalt geschützt, Teilnehmer dürfen dazuschreiben" data-i18n-title="space.mode.protect.hint">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z"/>
+                <path d="M9.5 12.5l2 2 3.5-4"/>
+              </svg>
+              <span class="mode-segment-label" data-i18n="space.mode.protect.label">Schutz</span>
+            </button>
+            <button type="button" class="mode-segment" data-mode="locked" role="radio" aria-checked="false" title="Sperre — nur du als Trainer kannst bearbeiten" data-i18n-title="space.mode.locked.hint">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none"/></svg>
+              <span class="mode-segment-label" data-i18n="space.mode.locked.label">Sperre</span>
+            </button>
+          </div>
           <button id="protectToggle" class="protect-toggle" type="button" hidden data-state="off" aria-label="Inhalt schützen" data-i18n-aria-label="space.protect.toggleOff" title="Trainer-Inhalt schützen — Teilnehmer können dazuschreiben, aber deinen Text nicht ändern" data-i18n-title="space.protect.toggleOff">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path class="fill-when-on" d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z"/>
@@ -59,12 +76,20 @@
       <a class="expired-link" href="https://malzi.space" data-i18n="space.expired.back">Zur Startseite</a>
     </div>
 
-    <div id="protectBanner" class="protect-banner" hidden role="status">
+    <div id="lockBanner" class="mode-banner mode-banner--lock" hidden role="status">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="10" rx="2"/>
+        <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none"/>
+      </svg>
+      <span id="lockBannerText" class="mode-banner-text" data-i18n="space.lock.banner.participant">Space gesperrt — du kannst den Inhalt nur lesen. Der Trainer hat die Bearbeitung gestoppt.</span>
+    </div>
+
+    <div id="protectBanner" class="mode-banner mode-banner--protect" hidden role="status">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z"/>
         <path d="M9.5 12.5l2 2 3.5-4"/>
       </svg>
-      <span id="protectBannerText" class="protect-banner-text" data-i18n="space.protect.banner.participant">Trainer-Inhalt geschützt — du kannst frei dazuschreiben und Eigenes ändern. Der gelb markierte Text bleibt unverändert.</span>
+      <span id="protectBannerText" class="mode-banner-text" data-i18n="space.protect.banner.participant">Trainer-Inhalt geschützt — du kannst frei dazuschreiben und Eigenes ändern. Der gelb markierte Text bleibt unverändert.</span>
     </div>
 
     <div id="protectToast" class="protect-toast" role="status" aria-live="polite">

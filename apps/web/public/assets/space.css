@@ -716,6 +716,115 @@ body.is-readonly #editorToolbar [data-action]{
   padding-left: 18px;
 }
 
+/* ── Mode switch: segmented control (Frei · Schutz · Sperre) ── */
+/* Replaces the standalone lock + protect icons for owners. Single-tap
+   selection across three mutually-exclusive states. Owners only. */
+.mode-switch{
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-switch[hidden]{ display: none !important; }
+.mode-segment{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: rgba(255,255,255,.55);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-radius: 9px;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+  white-space: nowrap;
+}
+.mode-segment svg{
+  width: 14px; height: 14px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.mode-segment:hover:not([aria-checked="true"]){
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.85);
+}
+.mode-segment:focus-visible{
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.mode-segment[aria-checked="true"]{
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.mode-segment[aria-checked="true"][data-mode="open"]{
+  background: rgba(34,197,94,.85);
+}
+.mode-segment[aria-checked="true"][data-mode="protect"]{
+  background: rgba(245,158,11,.92);
+}
+.mode-segment[aria-checked="true"][data-mode="locked"]{
+  background: rgba(239,68,68,.9);
+}
+.mode-segment[disabled]{
+  opacity: .5; cursor: not-allowed;
+}
+
+/* Hide the legacy single-purpose icon buttons for owners — the segmented
+   switch is the new control surface. Non-owners still see the lock icon as
+   a passive read-only indicator. */
+body.has-owner-ui #lockToggle,
+body.has-owner-ui #protectToggle{ display: none !important; }
+
+/* Hide the mode switch for non-owners. */
+body:not(.has-owner-ui) .mode-switch{ display: none !important; }
+
+/* ── Mode banners (lock + protect share the visual chassis) ── */
+.mode-banner{
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .85rem;
+  border-radius: 8px;
+  color: var(--text-hi);
+  border-left: 3px solid var(--accent);
+}
+.mode-banner svg{
+  width: 18px; height: 18px; flex-shrink: 0;
+  fill: none; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.mode-banner[hidden]{ display: none !important; }
+.mode-banner-text{ flex: 1; line-height: 1.4; min-width: 0; }
+
+.mode-banner--protect{
+  background: rgba(245,158,11,.08);
+  border-left-color: #f59e0b;
+}
+.mode-banner--protect svg{ stroke: #f59e0b; }
+
+.mode-banner--lock{
+  background: rgba(239,68,68,.08);
+  border-left-color: #ef4444;
+}
+.mode-banner--lock svg{ stroke: #ef4444; }
+
+/* Very narrow screens only — collapse mode-switch labels to icons. */
+@media (max-width: 340px){
+  .mode-segment{ padding: 8px 4px; }
+  .mode-segment-label{ display: none; }
+}
+
 /* ── Append-Only protection (v1.3.0) ── */
 /* Owner-authored text highlight. Continuous background; box-shadow underline
    so adjacent spans render as one seamless region. Hidden when protection
@@ -757,8 +866,31 @@ body.has-append-only:not(.has-owner-ui) .mz-owner-text{
 .protect-toggle[data-state="on"] svg path.fill-when-on{
   fill: rgba(245,158,11,.22);
 }
-/* Mirror the lock-toggle visibility pattern: owner-only control. */
-body:not(.has-owner-ui) .protect-toggle{ display: none; }
+/* Participant indicator: passive shield in the same colour as the active
+   owner state, but not clickable. Mirrors lock-toggle[data-state="readonly"]. */
+.protect-toggle[data-state="readonly"]{
+  color: #f59e0b;
+  cursor: default;
+  pointer-events: none;
+}
+.protect-toggle[data-state="readonly"] svg path.fill-when-on{
+  fill: rgba(245,158,11,.22);
+}
+.protect-toggle[data-state="readonly"]:hover{ color: #f59e0b; }
+
+/* Defensive: when protect is active for a non-owner, force the shield
+   indicator visible. Beats [hidden]{display:none !important} via higher
+   selector specificity. Also makes the orange colour stick even if the
+   JS state attribute did not update for some reason. */
+body.has-append-only:not(.has-owner-ui) #protectToggle{
+  display: inline-flex !important;
+  color: #f59e0b;
+  cursor: default;
+  pointer-events: none;
+}
+body.has-append-only:not(.has-owner-ui) #protectToggle svg path.fill-when-on{
+  fill: rgba(245,158,11,.22);
+}
 
 /* Banner shown to both roles while protection is active. */
 .protect-banner{
@@ -818,31 +950,116 @@ body:not(.has-owner-ui) .protect-toggle{ display: none; }
   .shell{ margin: 20px auto; }
 }
 
-@media (max-width: 520px){
+/* ── Mobile toolbar layout (v1.3.1) ──
+ * Row 1: TITEL | title (ellipsis) | action icons | presence | status dot
+ * Row 2: full-width mode-switch (owner only)
+ * Action icons (Owner-Link, Teilen) collapse to icon-only borderless buttons
+ * so the title row stays uncluttered. The mode-switch is the prominent
+ * primary control on its own line.
+ */
+@media (max-width: 600px){
   .shell{ margin: 12px auto; padding: 0 10px; }
   .toolbar.stuck{ top: 4px; }
-  .toolbar{ padding: 10px 12px; }
+  .toolbar{ padding: 12px 14px; }
+
   .toolbar .line-1{
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
-    flex-wrap: nowrap;
+    gap: 8px 8px;
   }
-  .title-label{ font-size: 11px; }
-  .toolbar .line-1 .title{
+  /* Dissolve the actions wrapper so its children participate as flex items
+     directly in .line-1 — needed for flex-order + flex-basis:100% wrapping. */
+  .toolbar-actions{ display: contents; margin: 0; }
+
+  .title-label{ order: 1; font-size: 11px; flex: 0 0 auto; }
+  .toolbar .line-1 .title:not([hidden]){
+    order: 2;
     flex: 1 1 0;
-    min-width: 60px;
-    max-width: 140px;
+    min-width: 0;
+    max-width: none;
     font-size: 14px;
     padding: 4px 8px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .toolbar-actions{ margin-left: 0; width: auto; flex-shrink: 0; }
-  .toolbar-actions .btn{ padding: 6px 10px; font-size: 13px; }
-  .pill{ padding: 4px 8px; font-size: 11px; flex-shrink: 0; }
-  .status-dot{ flex-shrink: 0; }
+
+  /* Action buttons in row 1, between title and presence. Compact pill style
+     with short text so the function (Owner-Link vs. Lese-Link) stays
+     unambiguous — icon-only was easy to confuse. Distinct accent colours
+     reinforce the difference: red for the owner-secret, cyan for the share link. */
+  .copy-owner-btn,
+  #showQr{
+    order: 3;
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    font-size: 11px;
+    letter-spacing: .03em;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transform: none;
+    box-shadow: none;
+  }
+  #showQr{
+    order: 4;
+    border: 1px solid rgba(56,189,248,.35);
+    background: transparent;
+    color: var(--accent);
+  }
+  #showQr:hover{
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    transform: none;
+    box-shadow: none;
+  }
+  .copy-owner-btn{
+    border: 1px solid rgba(239,68,68,.4);
+    background: transparent;
+    color: #fca5a5;
+  }
+  .copy-owner-btn:hover{
+    border-color: #ef4444;
+    background: rgba(239,68,68,.08);
+    color: #fff;
+    transform: none;
+    box-shadow: none;
+  }
+  /* Compact label text — keep visible so Owner-Link vs. Lese-Link is obvious. */
+  .copy-owner-btn > span,
+  #showQr > span{ display: inline; font-weight: 500; }
+  .copy-owner-btn svg,
+  #showQr svg{ width: 13px; height: 13px; }
+
+  #lockToggle{ order: 5; flex: 0 0 auto; }
+
+  .pill{ order: 10; flex: 0 0 auto; padding: 4px 10px; font-size: 12px; font-weight: 500; }
+  .status-dot{ order: 11; flex: 0 0 auto; }
+
+  /* Mode-switch breaks to row 2 (flex-basis 100% with order > everything else). */
+  .mode-switch{
+    order: 99;
+    flex: 1 1 100%;
+    width: 100%;
+    margin: 0;
+    padding: 4px;
+    border-radius: 14px;
+    display: flex;
+    gap: 3px;
+  }
+  .mode-segment{
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 10px 6px;
+    font-size: 12px;
+    letter-spacing: .05em;
+    border-radius: 11px;
+  }
+  .mode-segment svg{ width: 15px; height: 15px; }
+
+  /* Editor area density tweaks (preserved from previous mobile layout) */
   .editor-tools{ padding: 8px 6px; gap: 4px; }
   .tool-group{ gap: 3px; padding: 3px; border-radius: 9px; }
   .tool-btn{ padding: 4px 6px; min-height: 30px; min-width: 34px; font-size: 12px; gap: 4px; }
