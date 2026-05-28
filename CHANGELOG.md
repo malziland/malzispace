@@ -2,6 +2,18 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.4.0-rc3] - 2026-05-28
+
+### Fixed
+- **Zeilennummern-Ausrichtung driftete.** Der Gutter rendete jede Nummer mit
+  fester Hoehe (`1.6em`). Weicht die tatsaechlich gerenderte Editor-Zeilen-
+  hoehe browser-/zoom-/font-metrik-bedingt auch nur minimal ab, summiert sich
+  der Versatz mit jeder Zeile auf (in einem Browser exakt, im anderen zunehmend
+  verschoben). Die Zeilennummern werden jetzt an die **gemessene** Hoehe der
+  jeweiligen Editor-Zeile gekoppelt (`editor/line-numbers.js`), wodurch Gutter
+  und Text exakt tracken — unabhaengig von Browser, Zoom und Font.
+  Verifiziert: 0px Drift ueber 30 Zeilen in Chromium UND WebKit.
+
 ## [1.4.0-rc2] - 2026-05-28
 
 Korrigiert das Schutz-Verhalten auf die urspruengliche Anforderung: an

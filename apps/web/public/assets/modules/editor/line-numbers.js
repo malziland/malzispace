@@ -70,10 +70,11 @@ function countVisualLines(node, fallbackLineHeight) {
   return 0;
 }
 
-/** Measure visual lines for a buffer of inline/text nodes. */
+/** Measure visual lines + total pixel height for a buffer of inline/text nodes.
+ *  @returns {{lines:number, height:number}} */
 function measureInlineBufferVisualLines(nodes, fallbackLineHeight) {
   const filtered = Array.from(nodes || []).filter(Boolean);
-  if (!filtered.length) return 0;
+  if (!filtered.length) return { lines: 0, height: 0 };
   const first = filtered[0];
   const last = filtered[filtered.length - 1];
   try {
@@ -82,21 +83,27 @@ function measureInlineBufferVisualLines(nodes, fallbackLineHeight) {
     range.setEndAfter(last);
     const rect = range.getBoundingClientRect();
     if (rect && rect.height > 0) {
-      return Math.max(1, Math.round(rect.height / Math.max(1, fallbackLineHeight)));
+      const lines = Math.max(1, Math.round(rect.height / Math.max(1, fallbackLineHeight)));
+      return { lines, height: rect.height };
     }
   } catch (e) {}
-  return filtered.some((node) => {
+  const has = filtered.some((node) => {
     if (node.nodeType === Node.TEXT_NODE) return (node.nodeValue || '').trim().length > 0;
     return node instanceof Element && hasRenderableNodeContent(node);
-  }) ? 1 : 0;
+  });
+  return has ? { lines: 1, height: fallbackLineHeight } : { lines: 0, height: 0 };
 }
 
-/** Push `count` descriptor entries of `tagName` type. */
-function appendLineNumberDescriptors(target, count, tagName) {
+/** Push `count` descriptor entries of `tagName` type, each carrying the
+ *  measured per-visual-line pixel height so the gutter row can match the
+ *  editor's ACTUAL rendered line box (not a fixed `em`, which drifts across
+ *  browsers/zoom/font-metrics as the row count grows). */
+function appendLineNumberDescriptors(target, count, tagName, perLineHeight) {
   const safeCount = Math.max(1, Number(count) || 0);
   const safeTag = String(tagName || 'base').toLowerCase();
+  const h = Number.isFinite(perLineHeight) && perLineHeight > 0 ? perLineHeight : 0;
   for (let idx = 0; idx < safeCount; idx += 1) {
-    target.push(safeTag);
+    target.push({ tag: safeTag, height: h });
   }
 }
 
@@ -109,9 +116,20 @@ function collectLineNumberDescriptors() {
   const baseLineHeight = getComputedLineHeightPx(ctx.editor, 25.6);
   const inlineBuffer = [];
 
+  // Emit `count` rows for a block, each sized to the block's MEASURED height
+  // divided across its visual lines, so the gutter tracks the real rendered
+  // geometry instead of a fixed line-height.
+  const emitMeasuredBlock = (node, tag) => {
+    const lh = getComputedLineHeightPx(node, baseLineHeight);
+    const count = countVisualLines(node, lh);
+    const measured = measureNodeVisualHeight(node);
+    const perLine = (measured > 0 && count > 0) ? measured / count : lh;
+    appendLineNumberDescriptors(descriptors, count, tag, perLine);
+  };
+
   const flushInlineBuffer = () => {
-    const lines = measureInlineBufferVisualLines(inlineBuffer, baseLineHeight);
-    if (lines > 0) appendLineNumberDescriptors(descriptors, lines, 'base');
+    const { lines, height } = measureInlineBufferVisualLines(inlineBuffer, baseLineHeight);
+    if (lines > 0) appendLineNumberDescriptors(descriptors, lines, 'base', height / lines);
     inlineBuffer.length = 0;
   };
 
@@ -125,35 +143,34 @@ function collectLineNumberDescriptors() {
     const tag = (node.tagName || '').toLowerCase();
     if (tag === 'br') {
       flushInlineBuffer();
-      appendLineNumberDescriptors(descriptors, 1, 'base');
+      appendLineNumberDescriptors(descriptors, 1, 'base', baseLineHeight);
       return;
     }
     if (tag === 'hr') {
       flushInlineBuffer();
-      appendLineNumberDescriptors(descriptors, 1, 'hr');
+      const hrHeight = measureNodeVisualHeight(node);
+      appendLineNumberDescriptors(descriptors, 1, 'hr', hrHeight > 0 ? hrHeight : baseLineHeight);
       return;
     }
     if (tag === 'ul' || tag === 'ol') {
       flushInlineBuffer();
       const items = Array.from(node.children || []).filter((child) => ((child.tagName || '').toLowerCase() === 'li'));
       if (!items.length) {
-        appendLineNumberDescriptors(descriptors, 1, 'li');
+        appendLineNumberDescriptors(descriptors, 1, 'li', baseLineHeight);
         return;
       }
-      items.forEach((li) => {
-        appendLineNumberDescriptors(descriptors, countVisualLines(li, getComputedLineHeightPx(li, baseLineHeight)), 'li');
-      });
+      items.forEach((li) => emitMeasuredBlock(li, 'li'));
       return;
     }
     if (LINE_BLOCK_TAGS.has(tag)) {
       flushInlineBuffer();
-      appendLineNumberDescriptors(descriptors, countVisualLines(node, getComputedLineHeightPx(node, baseLineHeight)), tag);
+      emitMeasuredBlock(node, tag);
       return;
     }
     if (hasRenderableNodeContent(node)) inlineBuffer.push(node);
   });
   flushInlineBuffer();
-  if (!descriptors.length) descriptors.push('base');
+  if (!descriptors.length) descriptors.push({ tag: 'base', height: baseLineHeight });
   return descriptors;
 }
 
@@ -167,10 +184,17 @@ export function renderLineNumbers() {
 
   const frag = document.createDocumentFragment();
   for (let idx = 0; idx < lineDescriptors.length; idx += 1) {
+    const desc = lineDescriptors[idx] || { tag: 'base', height: 0 };
     const row = document.createElement('div');
-    const tagClass = lineDescriptors[idx] || 'base';
-    row.className = `line-number line-number--${tagClass}`;
+    row.className = `line-number line-number--${desc.tag || 'base'}`;
     row.textContent = String(idx + 1);
+    // Match the editor's actual rendered line height (measured) so the gutter
+    // can't drift away from the text as the document grows. Fractional px is
+    // intentional — it keeps cumulative positions exact.
+    if (desc.height > 0) {
+      row.style.height = `${desc.height}px`;
+      row.style.lineHeight = `${desc.height}px`;
+    }
     frag.appendChild(row);
   }
   ctx.lineNumbersInner.replaceChildren(frag);
