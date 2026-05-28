@@ -2,65 +2,46 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
-## [1.4.0-rc3] - 2026-05-28
+## [1.4.0] - 2026-05-28
+
+Finales Release der Schutz-Haertung (aus 1.3.7 + rc1–rc3 zusammengefasst):
+Safari/WebKit-Schutz dicht, korrektes Caching, korrekte Schreib-Regeln und
+ausgerichtete Zeilennummern.
 
 ### Fixed
-- **Zeilennummern-Ausrichtung driftete.** Der Gutter rendete jede Nummer mit
-  fester Hoehe (`1.6em`). Weicht die tatsaechlich gerenderte Editor-Zeilen-
-  hoehe browser-/zoom-/font-metrik-bedingt auch nur minimal ab, summiert sich
-  der Versatz mit jeder Zeile auf (in einem Browser exakt, im anderen zunehmend
-  verschoben). Die Zeilennummern werden jetzt an die **gemessene** Hoehe der
-  jeweiligen Editor-Zeile gekoppelt (`editor/line-numbers.js`), wodurch Gutter
-  und Text exakt tracken — unabhaengig von Browser, Zoom und Font.
-  Verifiziert: 0px Drift ueber 30 Zeilen in Chromium UND WebKit.
-
-## [1.4.0-rc2] - 2026-05-28
-
-Korrigiert das Schutz-Verhalten auf die urspruengliche Anforderung: an
-geschuetztem Text darf NICHTS direkt angehaengt werden.
+- **Safari/WebKit setzte den Schutz nicht durch.** Ein Teilnehmer konnte
+  gesperrten Text veraendern; der kaputte Stand wurde via CRDT verteilt und
+  vergiftete alle Clients (auch Brave). Ursache: WebKit fuehrt Editier-
+  Operationen am Owner-Span trotz `preventDefault` aus. Geloest durch einen
+  **harten CRDT-Invariant** (`syncYTextFromEditorHtml` verwirft jeden
+  Teilnehmer-Push, der Owner-Text aendert), **Reconcile gegen Y.Text** statt
+  DOM-Snapshot und einen **MutationObserver**, der native Mutationen abfaengt.
+- **Cache-Korrektheit des Builds.** `tools/bin/build_hosting.mjs` hashte
+  Dateien vor dem Import-Rewrite → gleicher Dateiname bei geaenderten Importen
+  → wiederkehrende Besucher bekamen bei `immutable`-Cache alten Code. Jetzt
+  wird ueber die transitive Abhaengigkeits-Huelle gehasht (zyklus-sicher).
+- **Zeilennummern-Ausrichtung driftete.** Fixe `1.6em`-Hoehe pro Nummer wich
+  von der real gerenderten Editor-Zeilenhoehe ab (browser-/zoom-/font-bedingt)
+  und summierte sich auf. Nummern werden jetzt an die **gemessene** Zeilenhoehe
+  gekoppelt (`editor/line-numbers.js`). 0px Drift ueber 30 Zeilen in Chromium
+  und WebKit.
 
 ### Changed
-- **Kein Anhaengen an geschuetzten Text.** Direkt an markiertem (gelbem)
-  Text ist weder Tippen noch Enter noch Einfuegen moeglich — auch nicht am
-  Zeilenende. Teilnehmer schreiben ausschliesslich in echten **freien
-  Zeilen**: leere Zeile zwischen Bloecken oder im freien Bereich darunter.
-  (Vorher erlaubte der Guard faelschlich das Anhaengen nach dem letzten
-  Owner-Span und Enter am Owner-Ende.)
-- **Automatische freie Schreibzeile.** Ist der letzte Block geschuetzt,
-  haelt das System fuer Teilnehmer automatisch eine leere, beschreibbare
-  Zeile darunter bereit, damit immer Schreibplatz vorhanden ist.
+- **Kein Anhaengen an geschuetzten Text.** Direkt an markiertem (gelbem) Text
+  ist weder Tippen noch Enter noch Einfuegen moeglich — auch nicht am
+  Zeilenende. Teilnehmer schreiben ausschliesslich in echten **freien Zeilen**
+  (leere Zeile zwischen Bloecken oder darunter).
+- **Automatische freie Schreibzeile** unter dem letzten geschuetzten Block,
+  damit Teilnehmer immer Schreibplatz haben.
 
-### Tests
-- Fuzz-E2E (`npm run test:e2e:protect:fuzz`) auf die neue Spec erweitert:
-  prueft, dass die freie Zeile existiert und in Chromium UND WebKit
-  beschreibbar ist, und dass Tippen/Enter exakt an der Owner-Grenze
-  blockiert wird. Owner-Text bleibt unter allen Angriffen + 140 Zufalls-
-  aktionen intakt.
+### Added
+- Cross-Engine-Real-Input-Fuzz-E2E `npm run test:e2e:protect:fuzz` (Chromium +
+  WebKit): echte Tastatur, echtes Strg/Cmd+V, Select-All, Mid-Text-Delete,
+  140 Zufallsaktionen. Owner-Text bleibt unter allen Angriffen intakt.
 
-## [1.4.0-rc1] - 2026-05-28
-
-Release Candidate. Buendelt die Safari/WebKit-Schutzhaertung (siehe 1.3.7)
-mit einem Fix der Asset-Cache-Korrektheit, damit der Schutz-Fix garantiert
-ALLE Nutzer erreicht — auch wiederkehrende mit gecachtem Stand.
-
-### Fixed
-- **Cache-Korrektheit des Builds.** `tools/bin/build_hosting.mjs` hashte
-  Dateien aus dem Original-Quelltext und schrieb Import-Pfade erst danach um.
-  Folge: ein Modul, dessen Quelltext gleich blieb, dessen Importe aber auf
-  geaenderte Module zeigten, behielt seinen Dateinamen — bei `Cache-Control:
-  immutable` bekamen wiederkehrende Besucher unter gleichem Namen alten
-  Inhalt (und `version-check.js` schlug nicht an, weil der Name gleich blieb).
-- **Inhalts-korrektes Fingerprinting.** Jede Datei wird jetzt ueber ihre
-  vollstaendige transitive Abhaengigkeits-Huelle gehasht (eigener Quell-Hash
-  + sortierte Quell-Hashes aller erreichbaren Module, zyklus-sicher). Aendert
-  sich irgendeine transitive Abhaengigkeit, aendert sich der Dateiname →
-  Browser laden garantiert frisch, Caching bleibt korrekt.
-
-### Notes
-- Enthaelt die komplette Schutzhaertung aus 1.3.7 (Paste/Composition/Undo/
-  Reconciliation + harter CRDT-Owner-Invariant fuer WebKit/Safari).
-- Bekannte Einschraenkung unveraendert: Tippen exakt an der Owner-Grenze
-  haengt auf WebKit nicht an (Paste / eigene Zeile funktionieren).
+### Known limitations
+- Durchsetzung bleibt clientseitig (CRDT-Invariant + Reconcile + Guard); eine
+  serverseitige Relay-Pruefung gegen *manipulierte* Clients steht weiter aus.
 
 ## [1.3.7] - 2026-05-28
 
