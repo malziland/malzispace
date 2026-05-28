@@ -45,11 +45,36 @@ veraendern konnten.
   Assertions fuer Paste-Block und Reconciliation-Revert erweitert
   (17 gruene Checks, stabil ueber mehrere Laeufe).
 
+### Fixed (WebKit/Safari — zweite Runde)
+- **Safari/WebKit setzte den Schutz nicht durch.** Ein Teilnehmer konnte
+  gesperrten Text veraendern; schlimmer noch, der kaputte Stand wurde ueber
+  das CRDT verteilt und vergiftete die Baseline aller Clients (auch Brave).
+  Ursache: WebKit fuehrt Editier-Operationen (z.B. `insertParagraph` am
+  Owner-Span) trotz `preventDefault` aus und klont dabei den Owner-Span.
+- **Harter CRDT-Invariant** in `network/collaboration.js`
+  (`syncYTextFromEditorHtml`): ein Teilnehmer-Push, der den Owner-Text
+  gegenueber Y.Text veraendern wuerde, wird komplett verworfen. Y.Text
+  bleibt die unkorrumpierte Wahrheit, ein einzelner versagender Client kann
+  das Dokument nicht mehr vergiften.
+- **Reconciliation gegen Y.Text statt DOM-Snapshot** + **MutationObserver**
+  in `editor/protect-guard.js`: jede DOM-Aenderung (auch native, am
+  beforeinput vorbei) wird gegen Y.Text geprueft und der Editor bei
+  Abweichung daraus neu aufgebaut. Engine-unabhaengige Garantie.
+
+### Added (Tests)
+- Echter Cross-Engine-Fuzz-E2E `tests/e2e/run_space_protect_fuzz_e2e.mjs`
+  (`npm run test:e2e:protect:fuzz`): reale Tastatur, echtes Strg/Cmd+V,
+  Select-All, Backspace/Delete mitten im Text und 140 Zufallsaktionen — in
+  **Chromium UND WebKit (Safari-Engine)**. Mit Positiv-Kontrollen, damit
+  kein Check leer durchlaeuft. Owner-Text bleibt in beiden Engines intakt.
+
 ### Known limitations
-- Die Durchsetzung bleibt clientseitig (Reconciliation + Guard). Eine
-  serverseitige Relay-Pruefung der Yjs-Updates gegen Owner-Bereiche —
-  Verteidigung gegen *manipulierte* Clients, nicht gegen normale
-  Teilnehmer — steht weiterhin aus (analog zum Lock-Defence-in-Depth).
+- Durchsetzung bleibt clientseitig (CRDT-Invariant + Reconciliation +
+  Guard). Eine serverseitige Relay-Pruefung gegen *manipulierte* Clients
+  steht weiterhin aus (analog zum Lock-Defence-in-Depth).
+- WebKit/Safari: Tippen *exakt* an der Owner-Grenze haengt nicht an (WebKit
+  fuegt ins geschuetzte Span ein → korrekt verworfen). Teilnehmer haengen
+  per Paste oder in einer eigenen Zeile an. Folgefix offen.
 
 ## [1.3.1] - 2026-05-27
 

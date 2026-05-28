@@ -451,25 +451,58 @@ export function recomputeOwnerBaseline() {
   lastGoodCaret = captureCaret();
 }
 
-function reconcileParticipantInput() {
+/** Concatenated owner-span text from a stored-content HTML string. */
+function ownerTextFromStored(storedHtml) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = typeof storedHtml === 'string' ? storedHtml : '';
+  let out = '';
+  tpl.content.querySelectorAll(OWNER_SELECTOR).forEach((sp) => {
+    out += (sp.textContent || '').replace(/​/g, '').replace(/ /g, ' ');
+  });
+  return out;
+}
+
+function reconcileNow(source) {
   if (!ctx.appendOnly || ctx.isOwner) return;
   if (ctx.applyingProtectRestore) return;
+
+  // Preferred path — reconcile against Y.Text, the shared source of truth.
+  // A participant must never change owner text. We run BEFORE the CRDT-sync
+  // input listener, so a corrupt editor state is never pushed; Y.Text stays
+  // authoritative and CANNOT be poisoned by an echo of our own corruption
+  // (which is exactly how a single failing client — e.g. Safari/WebKit
+  // cloning the owner span — was breaking protection for everyone). If the
+  // editor's owner text diverges from Y.Text, rebuild the editor from Y.Text,
+  // discarding the illegitimate change.
+  if (ctx.crdtEnabled && ctx.ytext && ctx.ytext.length
+      && typeof ctx.setEditorWithCursor === 'function') {
+    const stored = ctx.ytext.toString();
+    if (ownerTextSignature(ctx.editor) === ownerTextFromStored(stored)) return;
+    ctx.applyingProtectRestore = true;
+    try {
+      ctx.setEditorWithCursor(stored);
+      ctx.lastKnownStoredForHistory = getEditorStoredContent();
+    } catch (err) {
+      diag('part.reconcile-error');
+    } finally {
+      ctx.applyingProtectRestore = false;
+    }
+    toast('space.protect.toast.modify');
+    diag('part.reconcile-revert-ytext(' + (source || 'input') + ')');
+    return;
+  }
+
+  // Fallback — no CRDT (local / simulator mode): use a DOM snapshot baseline.
   const sig = ownerTextSignature(ctx.editor);
   if (sig === lastGoodOwnerText) {
-    // Owner content intact → this was a legitimate participant edit. Adopt
-    // the new DOM as the baseline to revert to next time.
     lastGoodHtml = ctx.editor.innerHTML;
     lastGoodCaret = captureCaret();
     return;
   }
-  // Owner content was modified by a participant — undo the whole operation.
-  // This runs before the CRDT-sync input listener (registered later during
-  // async init), so the bad state never reaches Y.Text or peers.
   ctx.applyingProtectRestore = true;
   try {
     ctx.editor.innerHTML = lastGoodHtml;
     restoreEditorSelection(lastGoodCaret.start, lastGoodCaret.end);
-    // Keep the bad transient out of the command history stack.
     ctx.lastKnownStoredForHistory = getEditorStoredContent();
   } catch (err) {
     diag('part.reconcile-error');
@@ -477,7 +510,7 @@ function reconcileParticipantInput() {
     ctx.applyingProtectRestore = false;
   }
   toast('space.protect.toast.modify');
-  diag('part.reconcile-revert');
+  diag('part.reconcile-revert(' + (source || 'input') + ')');
 }
 
 // ── Owner-mode: wrap typed text in `.mz-owner-text` ─────────────
@@ -737,11 +770,13 @@ function blockIfProtected(e) {
     // where every subsequent input is treated as an owner-edit and blocked.
     const containingBlock = getContainingBlock(range.startContainer);
     if (containingBlock && containingBlock.querySelector(OWNER_SELECTOR)) {
-      if (insertCleanParagraphAfterCaret(range)) {
-        e.preventDefault();
-        diag('part.clean-newline');
-        return true;
-      }
+      // preventDefault BEFORE mutating: some engines (WebKit/Safari) otherwise
+      // still run the native paragraph split and clone the owner span,
+      // doubling protected text.
+      e.preventDefault();
+      insertCleanParagraphAfterCaret(range);
+      diag('part.clean-newline');
+      return true;
     }
     diag('part.pass-enter');
   }
@@ -779,12 +814,21 @@ export function initProtectGuard() {
     blockIfProtected(e);
   });
 
-  // Safety net: if any input slipped past the preventive guard above (e.g.
-  // non-cancelable composition on mobile keyboards) and changed owner
-  // content, restore it. Registered here — before the CRDT-sync input
-  // listener added later in collaboration.init — so the bad state never
-  // propagates to Y.Text or other peers.
-  ctx.editor.addEventListener('input', reconcileParticipantInput);
+  // Safety net 1: synchronous check on every input. Handles the common case
+  // and runs before the CRDT-sync input listener, so most bad edits never
+  // reach Y.Text.
+  ctx.editor.addEventListener('input', () => reconcileNow('input'));
+
+  // Safety net 2: a MutationObserver that fires for ANY DOM change to the
+  // editor — including native mutations that bypass beforeinput/input or
+  // ignore preventDefault (notably WebKit/Safari cloning the owner span on
+  // Enter). This is the engine-agnostic guarantee: whatever path mutates the
+  // protected text, the owner content is restored.
+  if (typeof MutationObserver === 'function') {
+    const observer = new MutationObserver(() => reconcileNow('observer'));
+    observer.observe(ctx.editor, { childList: true, subtree: true, characterData: true });
+    ctx.protectObserver = observer;
+  }
 
   // Cut/paste/drag don't fire `beforeinput` for the deletion side reliably
   // across browsers — handle them explicitly.

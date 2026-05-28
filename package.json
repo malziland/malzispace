@@ -23,7 +23,8 @@
     "test:e2e:i18n": "BASE_URL=http://127.0.0.1:4173 node tests/e2e/run_i18n_legal_checks.mjs",
     "test:e2e:multiplayer:sim": "BASE_URL=http://127.0.0.1:4173 SIM=1 ENGINES=chromium node tests/e2e/run_multiplayer_checks.mjs",
     "test:e2e:lock": "node tests/e2e/run_space_lock_e2e.mjs",
-    "test:e2e:protect": "node tests/e2e/run_space_protect_e2e.mjs"
+    "test:e2e:protect": "node tests/e2e/run_space_protect_e2e.mjs",
+    "test:e2e:protect:fuzz": "node tests/e2e/run_space_protect_fuzz_e2e.mjs"
   },
   "engines": {
     "node": "24"

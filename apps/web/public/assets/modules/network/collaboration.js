@@ -137,12 +137,34 @@ function commonSuffixLen(a, b, prefixLen) {
   return len;
 }
 
+/** Concatenated owner-span text from a stored-content HTML string. */
+function ownerTextOfStored(storedHtml) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = typeof storedHtml === 'string' ? storedHtml : '';
+  let out = '';
+  tpl.content.querySelectorAll('.mz-owner-text').forEach((sp) => {
+    out += (sp.textContent || '').replace(/​/g, '').replace(/ /g, ' ');
+  });
+  return out;
+}
+
 /** Synchronize the Yjs text type with the current editor HTML. */
 export function syncYTextFromEditorHtml(nextStored) {
   if (!ctx.ytext) return;
   const currentStored = ctx.ytext.toString();
   const next = typeof nextStored === 'string' ? nextStored : '';
   if (next === currentStored) return;
+
+  // Append-only protection — hard CRDT invariant: a participant must NEVER
+  // change owner-marked text in the shared document. If a local edit would
+  // alter the owner text (e.g. WebKit/Safari cloning the owner span on Enter
+  // despite preventDefault), refuse the push entirely. Y.Text stays the
+  // uncorrupted source of truth and the protect guard rebuilds the editor
+  // from it. Without this, one failing client poisons the document for all.
+  if (ctx.appendOnly && !ctx.isOwner
+      && ownerTextOfStored(next) !== ownerTextOfStored(currentStored)) {
+    return;
+  }
 
   const prefix = commonPrefixLen(currentStored, next);
   const suffix = commonSuffixLen(currentStored, next, prefix);
