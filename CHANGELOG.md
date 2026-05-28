@@ -2,6 +2,31 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.4.0-rc1] - 2026-05-28
+
+Release Candidate. Buendelt die Safari/WebKit-Schutzhaertung (siehe 1.3.7)
+mit einem Fix der Asset-Cache-Korrektheit, damit der Schutz-Fix garantiert
+ALLE Nutzer erreicht — auch wiederkehrende mit gecachtem Stand.
+
+### Fixed
+- **Cache-Korrektheit des Builds.** `tools/bin/build_hosting.mjs` hashte
+  Dateien aus dem Original-Quelltext und schrieb Import-Pfade erst danach um.
+  Folge: ein Modul, dessen Quelltext gleich blieb, dessen Importe aber auf
+  geaenderte Module zeigten, behielt seinen Dateinamen — bei `Cache-Control:
+  immutable` bekamen wiederkehrende Besucher unter gleichem Namen alten
+  Inhalt (und `version-check.js` schlug nicht an, weil der Name gleich blieb).
+- **Inhalts-korrektes Fingerprinting.** Jede Datei wird jetzt ueber ihre
+  vollstaendige transitive Abhaengigkeits-Huelle gehasht (eigener Quell-Hash
+  + sortierte Quell-Hashes aller erreichbaren Module, zyklus-sicher). Aendert
+  sich irgendeine transitive Abhaengigkeit, aendert sich der Dateiname →
+  Browser laden garantiert frisch, Caching bleibt korrekt.
+
+### Notes
+- Enthaelt die komplette Schutzhaertung aus 1.3.7 (Paste/Composition/Undo/
+  Reconciliation + harter CRDT-Owner-Invariant fuer WebKit/Safari).
+- Bekannte Einschraenkung unveraendert: Tippen exakt an der Owner-Grenze
+  haengt auf WebKit nicht an (Paste / eigene Zeile funktionieren).
+
 ## [1.3.7] - 2026-05-28
 
 Haertung des Schutz-Modus. Ausloeser: ein Schueler konnte gelb

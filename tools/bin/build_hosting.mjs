@@ -62,20 +62,101 @@ async function copySourceTree(files) {
   }
 }
 
-async function fingerprintFiles(files) {
+function hashedRelOf(relPath, hash) {
+  const parsed = path.posix.parse(relPath);
+  return path.posix.join(parsed.dir, `${parsed.name}.${hash}${parsed.ext}`);
+}
+
+/** Does `content` (a file at `fileRelPath`) reference the fingerprinted
+ *  file `depRel`? Mirrors the matching in rewriteReferences so detected
+ *  dependencies are exactly the references that will be rewritten. */
+function referencesDep(content, fileRelPath, depRel) {
+  if (content.includes(`/${depRel}`)) return true;
+  const fileDir = path.posix.dirname(fileRelPath);
+  const relSource = path.posix.relative(fileDir, depRel) || path.posix.basename(depRel);
+  if (relSource && content.includes(relSource)) return true;
+  const dotted = withDotPrefix(relSource);
+  return !!(dotted && content.includes(dotted));
+}
+
+/**
+ * Compute the fingerprint manifest so each file's hash reflects its FULL
+ * transitive content. A naive single pass (hash original source, then rewrite
+ * imports) is wrong: a module whose own source is unchanged but whose imports
+ * now point to changed dependencies keeps its old filename while its served
+ * content differs → with `immutable` caching, returning visitors get a stale
+ * module graph (this is the bug that kept the protect fix from reaching
+ * already-open tabs).
+ *
+ * Fix: a file's hash = H(own source + the sorted source-hashes of every file
+ * in its transitive dependency closure). Cycle-safe (the closure is just a
+ * reachable set), so it works even though some modules import each other.
+ */
+async function computeManifest(files) {
+  const fpRels = files.filter(shouldFingerprint);
+  const sourceHash = new Map();
+  const text = new Map();
+
+  for (const relPath of fpRels) {
+    const ext = path.posix.extname(relPath).toLowerCase();
+    if (TEXT_EXTENSIONS.has(ext)) {
+      const content = await fs.readFile(path.join(OUT_DIR, relPath), 'utf8');
+      text.set(relPath, content);
+      sourceHash.set(relPath, hashBuffer(Buffer.from(content)));
+    } else {
+      sourceHash.set(relPath, hashBuffer(await fs.readFile(path.join(OUT_DIR, relPath))));
+    }
+  }
+
+  // Direct dependency edges between fingerprinted files.
+  const deps = new Map();
+  for (const relPath of fpRels) {
+    const content = text.get(relPath);
+    const set = new Set();
+    if (content) {
+      for (const dep of fpRels) {
+        if (dep !== relPath && referencesDep(content, relPath, dep)) set.add(dep);
+      }
+    }
+    deps.set(relPath, set);
+  }
+
+  // Transitive closure (cycle-safe) → content-address each file by its own
+  // source plus every reachable dependency's source hash.
   const manifest = {};
-  for (const relPath of files) {
-    if (!shouldFingerprint(relPath)) continue;
-    const outPath = path.join(OUT_DIR, relPath);
-    const buffer = await fs.readFile(outPath);
-    const parsed = path.posix.parse(relPath);
-    const hashedRelPath = path.posix.join(parsed.dir, `${parsed.name}.${hashBuffer(buffer)}${parsed.ext}`);
-    const hashedOutPath = path.join(OUT_DIR, hashedRelPath);
-    await fs.mkdir(path.dirname(hashedOutPath), { recursive: true });
-    await fs.rename(outPath, hashedOutPath);
-    manifest[relPath] = hashedRelPath;
+  for (const relPath of fpRels) {
+    const closure = new Set();
+    const stack = [...deps.get(relPath)];
+    while (stack.length) {
+      const d = stack.pop();
+      if (closure.has(d)) continue;
+      closure.add(d);
+      for (const next of deps.get(d) || []) if (!closure.has(next)) stack.push(next);
+    }
+    const parts = [relPath, sourceHash.get(relPath)];
+    for (const d of [...closure].sort()) parts.push(`${d}:${sourceHash.get(d)}`);
+    manifest[relPath] = hashedRelOf(relPath, hashBuffer(Buffer.from(parts.join('\n'))));
   }
   return manifest;
+}
+
+/** Rewrite references in every text file, then rename fingerprinted files. */
+async function applyManifest(manifest) {
+  const outFiles = await walk(OUT_DIR);
+  for (const relPath of outFiles) {
+    const ext = path.posix.extname(relPath).toLowerCase();
+    if (!TEXT_EXTENSIONS.has(ext)) continue;
+    const absPath = path.join(OUT_DIR, relPath);
+    const rewritten = rewriteReferences(await fs.readFile(absPath, 'utf8'), relPath, manifest);
+    await fs.writeFile(absPath, rewritten);
+  }
+  for (const [relPath, hashedRelPath] of Object.entries(manifest)) {
+    if (relPath === hashedRelPath) continue;
+    const from = path.join(OUT_DIR, relPath);
+    const to = path.join(OUT_DIR, hashedRelPath);
+    await fs.mkdir(path.dirname(to), { recursive: true });
+    await fs.rename(from, to);
+  }
 }
 
 function rewriteReferences(content, fileRelPath, manifest) {
@@ -106,18 +187,6 @@ function rewriteReferences(content, fileRelPath, manifest) {
   }
 
   return next;
-}
-
-async function rewriteTextFiles(manifest) {
-  const outFiles = await walk(OUT_DIR);
-  for (const relPath of outFiles) {
-    const ext = path.posix.extname(relPath).toLowerCase();
-    if (!TEXT_EXTENSIONS.has(ext)) continue;
-    const absPath = path.join(OUT_DIR, relPath);
-    const original = await fs.readFile(absPath, 'utf8');
-    const rewritten = rewriteReferences(original, relPath, manifest);
-    await fs.writeFile(absPath, rewritten);
-  }
 }
 
 /**
@@ -154,8 +223,8 @@ async function main() {
   const sourceFiles = await walk(SRC_DIR);
   await syntaxCheckSources(sourceFiles);
   await copySourceTree(sourceFiles);
-  const manifest = await fingerprintFiles(sourceFiles);
-  await rewriteTextFiles(manifest);
+  const manifest = await computeManifest(sourceFiles);
+  await applyManifest(manifest);
   await fs.writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   console.log(`Hosting build ready: ${OUT_DIR}`);
 }
