@@ -84,6 +84,9 @@ export function applyProtectState({ appendOnly } = {}) {
   updateProtectButtonUi();
   updateBannerUi();
   if (typeof ctx.refreshMode === 'function') ctx.refreshMode();
+  // Re-establish the owner-content baseline the reconciliation guard reverts
+  // to, now that protection state (and possibly retro-marking) has settled.
+  if (typeof ctx.recomputeOwnerBaseline === 'function') ctx.recomputeOwnerBaseline();
 }
 
 /**

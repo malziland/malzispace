@@ -70,6 +70,7 @@ async function getProtectButtonState(page) {
       exists: true,
       hidden: btn.hasAttribute('hidden'),
       display: getComputedStyle(btn).display,
+      disabled: !!btn.disabled,
       state: btn.getAttribute('data-state') || ''
     };
   });
@@ -90,6 +91,23 @@ async function setEditorContent(page, html) {
     ed.innerHTML = h;
     ed.dispatchEvent(new InputEvent('input', { bubbles: true }));
   }, html);
+}
+
+// Owners drive lock/protect via the three-state mode switch (v1.3.1+), not
+// the legacy #lockToggle / #protectToggle icon buttons.
+async function clickMode(page, mode) {
+  return page.click(`#modeSwitch .mode-segment[data-mode="${mode}"]`);
+}
+
+async function currentOwnerMode(page) {
+  return page.evaluate(() => {
+    const active = document.querySelector('#modeSwitch .mode-segment[aria-checked="true"]');
+    return active ? active.getAttribute('data-mode') : null;
+  });
+}
+
+async function isAppendOnlyActive(page) {
+  return page.evaluate(() => document.body.classList.contains('has-append-only'));
 }
 
 async function main() {
@@ -130,70 +148,60 @@ async function main() {
 
     await waitFor(() => isEditorEditable(ownerPage), { timeoutMs: 15_000, label: 'owner editor editable' });
 
-    // First unlock the space — protect is independent of lock but the
-    // landing-page "lock on create" path leaves the space read_only initially.
-    await ownerPage.click('#lockToggle');
+    // The owner drives lock/protect via the three-state mode switch. It is
+    // owner-only, so its visibility also confirms owner status.
     await waitFor(async () => {
       return ownerPage.evaluate(() => {
-        const l = document.getElementById('lockToggle');
-        return l && l.getAttribute('data-state') === 'open';
+        const m = document.getElementById('modeSwitch');
+        return !!m && !m.hasAttribute('hidden');
       });
-    }, { timeoutMs: 8000, label: 'space unlocked' });
-    pass('PASS owner_unlocked - space unlocked before protect test begins');
+    }, { timeoutMs: 8000, label: 'owner sees mode switch' });
+    pass('PASS owner_sees_mode_switch');
 
-    // Protect button must be visible for the owner, state=off initially.
-    await waitFor(async () => {
-      const s = await getProtectButtonState(ownerPage);
-      return s.exists && !s.hidden && s.state === 'off';
-    }, { timeoutMs: 8000, label: 'owner sees protect button (state=off)' });
-    pass('PASS owner_sees_protect_button - state=off initially');
+    // First unlock the space — the landing-page "lock on create" path leaves
+    // the space read_only (mode=locked) initially.
+    await clickMode(ownerPage, 'open');
+    await waitFor(async () => (await currentOwnerMode(ownerPage)) === 'open',
+      { timeoutMs: 8000, label: 'space unlocked (mode=open)' });
+    await waitFor(() => isEditorEditable(ownerPage), { timeoutMs: 8000, label: 'editor editable after unlock' });
+    pass('PASS owner_unlocked - mode=open before protect test begins');
+
+    // Protect is off initially: no banner, no body flag.
+    if (await isAppendOnlyActive(ownerPage)) throw new Error('owner: append-only should be off initially');
+    pass('PASS owner_protect_off_initially');
 
     // Banner is hidden when protect is off.
     if (await isProtectBannerVisible(ownerPage)) throw new Error('owner: protect banner should be hidden when protect=off');
     pass('PASS owner_no_banner_when_off');
 
-    // Seed some plain text for retroactive marking.
+    // Wait until collaboration init has fully settled (initial load + pull),
+    // otherwise an async pull can clobber the seed right before activation.
+    await waitFor(() => ownerPage.evaluate(() => window.__MZ_COLLAB_READY__ === true),
+      { timeoutMs: 10_000, label: 'owner collab ready' });
+
+    // Seed some plain text for retroactive marking, and confirm it is present
+    // and stable immediately before activating protect.
     await setEditorContent(ownerPage, '<p>Aufgabe: Brainstorming</p>');
-    await ownerPage.waitForTimeout(500);
+    await waitFor(() => ownerPage.evaluate(() => /Brainstorming/.test(document.getElementById('editor').textContent || '')),
+      { timeoutMs: 8000, label: 'seed content present before activation' });
 
     // ── Owner activates protect ────────────────────────────────────
-    await ownerPage.click('#protectToggle');
-    await waitFor(async () => {
-      const s = await getProtectButtonState(ownerPage);
-      return s.state === 'on';
-    }, { timeoutMs: 8000, label: 'protect button state=on' });
-    pass('PASS owner_activates_protect - state=on');
+    await clickMode(ownerPage, 'protect');
+    await waitFor(async () => (await currentOwnerMode(ownerPage)) === 'protect' && (await isAppendOnlyActive(ownerPage)),
+      { timeoutMs: 8000, label: 'mode=protect + append-only active' });
+    pass('PASS owner_activates_protect - mode=protect');
 
     if (!await isProtectBannerVisible(ownerPage)) throw new Error('owner: protect banner must appear when protect=on');
     pass('PASS owner_banner_visible_when_on');
 
     // Retroactive marking: existing content must now be wrapped in .mz-owner-text.
-    const hasRetroMarking = await ownerPage.evaluate(() => {
-      const ed = document.getElementById('editor');
-      return !!ed.querySelector('.mz-owner-text');
-    });
-    if (!hasRetroMarking) throw new Error('retroactive marking did not wrap existing content');
+    await waitFor(() => ownerPage.evaluate(() => !!document.getElementById('editor').querySelector('.mz-owner-text')),
+      { timeoutMs: 8000, label: 'retroactive marking wraps existing content' });
     pass('PASS retroactive_marking - existing content wrapped in .mz-owner-text on first activation');
 
-    // Owner can still edit anything (including their own protected text).
-    const ownerCanEditOwn = await ownerPage.evaluate(() => {
-      const ed = document.getElementById('editor');
-      const span = ed.querySelector('.mz-owner-text');
-      if (!span) return false;
-      const range = document.createRange();
-      range.selectNodeContents(span);
-      const sel = window.getSelection();
-      sel.removeAllRanges(); sel.addRange(range);
-      const before = ed.textContent;
-      document.execCommand('delete');
-      return ed.textContent !== before;
-    });
-    if (!ownerCanEditOwn) throw new Error('owner cannot edit their own owner-marked text');
-    pass('PASS owner_can_edit_own_marked_text');
-
-    // Re-seed for reader test.
-    await setEditorContent(ownerPage, '<p><span class="mz-owner-text">Aufgabe: Antworten unten</span></p>');
-    await ownerPage.waitForTimeout(500);
+    // NOTE: the owner-edits-own-content check runs AFTER the reader probes —
+    // it mutates the shared doc, and doing it here would race the reader's
+    // initial load of the (then still stable) marked content.
 
     // ── Reader ─────────────────────────────────────────────────────
     const hash = new URL(initialOwnerUrl).hash || '';
@@ -212,16 +220,29 @@ async function main() {
     await readerPage.waitForSelector('#editor', { timeout: 10_000 });
     await readerPage.waitForTimeout(2500); // initial /api/load + ws frames
 
-    // Reader does NOT see the protect toggle.
+    // Reader never gets an interactive protect toggle. Since v1.3.1 a passive
+    // shield indicator is shown while protect is active — it must be disabled.
     const readerProtectBtn = await getProtectButtonState(readerPage);
-    if (readerProtectBtn.exists && readerProtectBtn.display !== 'none' && !readerProtectBtn.hidden) {
-      throw new Error('reader: protect toggle must be hidden for non-owners');
+    const interactiveForReader = readerProtectBtn.exists
+      && !readerProtectBtn.hidden
+      && readerProtectBtn.display !== 'none'
+      && !readerProtectBtn.disabled;
+    if (interactiveForReader) {
+      throw new Error('reader: protect control must be passive (disabled) for non-owners: ' + JSON.stringify(readerProtectBtn));
     }
-    pass('PASS reader_no_protect_button');
+    pass('PASS reader_no_interactive_protect_toggle - indicator is passive/disabled');
 
     // Reader DOES see the banner.
     await waitFor(() => isProtectBannerVisible(readerPage), { timeoutMs: 8000, label: 'reader sees protect banner' });
     pass('PASS reader_sees_banner');
+
+    // The owner-marked content (retro-marked on activation) must reach the
+    // reader before we probe edit-blocking on it.
+    await waitFor(() => readerPage.evaluate(() => {
+      const sp = document.getElementById('editor').querySelector('.mz-owner-text');
+      return !!sp && (sp.textContent || '').trim().length >= 8;
+    }), { timeoutMs: 12_000, label: 'owner-marked content reaches reader' });
+    pass('PASS reader_receives_owner_content');
 
     // Reader cannot edit owner-marked text. We simulate a Backspace at the
     // end of the protected span and verify the content is unchanged.
@@ -246,12 +267,74 @@ async function main() {
     }
     pass('PASS reader_edit_blocked - beforeinput.defaultPrevented + content unchanged');
 
+    // Reader cannot paste over owner-marked text. The paste handler runs its
+    // own manual delete+insert (bypassing beforeinput), so it must carry its
+    // own participant guard (regression fixed 2026-05-28).
+    const readerPasteBlocked = await readerPage.evaluate(() => {
+      const ed = document.getElementById('editor');
+      const span = ed.querySelector('.mz-owner-text');
+      if (!span) return { ok: false, reason: 'no_span' };
+      const before = ed.textContent;
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      const dt = new DataTransfer();
+      dt.setData('text/plain', 'HACK');
+      const evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
+      ed.dispatchEvent(evt);
+      const after = ed.textContent;
+      return { ok: after === before, before, after };
+    });
+    if (!readerPasteBlocked.ok) {
+      throw new Error('reader paste over owner text was not blocked: ' + JSON.stringify(readerPasteBlocked));
+    }
+    pass('PASS reader_paste_blocked - paste over owner content left it unchanged');
+
+    // Reconciliation safety net: if a mutation slips past the preventive guard
+    // (e.g. a non-cancelable composition event on a mobile keyboard) and
+    // deletes part of the owner text, the next input must restore it.
+    const readerReconciled = await readerPage.evaluate(() => {
+      const ed = document.getElementById('editor');
+      const span = ed.querySelector('.mz-owner-text');
+      if (!span) return { ok: false, reason: 'no_span' };
+      const before = span.textContent;
+      const tn = span.firstChild;
+      if (!tn || tn.nodeType !== 3 || (tn.textContent || '').length < 8) {
+        return { ok: false, reason: 'unexpected_owner_node' };
+      }
+      tn.deleteData(3, 4); // chop characters out of the middle of owner text
+      ed.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', cancelable: false }));
+      const restored = ed.querySelector('.mz-owner-text');
+      const after = restored ? restored.textContent : null;
+      return { ok: after === before, before, after };
+    });
+    if (!readerReconciled.ok) {
+      throw new Error('reconciliation did not restore mutated owner text: ' + JSON.stringify(readerReconciled));
+    }
+    pass('PASS reader_reconcile_revert - slipped-through owner mutation was restored');
+
+    // Owner can still edit anything, including their own protected text. Done
+    // here (after the reader probes) so it doesn't race the reader's load.
+    const ownerCanEditOwn = await ownerPage.evaluate(() => {
+      const ed = document.getElementById('editor');
+      const span = ed.querySelector('.mz-owner-text');
+      if (!span) return false;
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      const before = ed.textContent;
+      document.execCommand('delete');
+      return ed.textContent !== before;
+    });
+    if (!ownerCanEditOwn) throw new Error('owner cannot edit their own owner-marked text');
+    pass('PASS owner_can_edit_own_marked_text');
+
     // ── Owner deactivates protect → reader's banner must disappear ─
-    await ownerPage.click('#protectToggle');
-    await waitFor(async () => {
-      const s = await getProtectButtonState(ownerPage);
-      return s.state === 'off';
-    }, { timeoutMs: 8000, label: 'owner protect button state=off' });
+    await clickMode(ownerPage, 'open');
+    await waitFor(async () => (await currentOwnerMode(ownerPage)) === 'open' && !(await isAppendOnlyActive(ownerPage)),
+      { timeoutMs: 8000, label: 'mode=open + append-only off' });
     pass('PASS owner_deactivates_protect');
 
     await waitFor(async () => !(await isProtectBannerVisible(readerPage)), { timeoutMs: 8000, label: 'reader banner hides live' });

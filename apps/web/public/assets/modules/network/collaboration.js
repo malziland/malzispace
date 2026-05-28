@@ -725,6 +725,7 @@ async function legacyLoadAndRender(options = {}) {
   }
   updateTitleVisibility();
   if (ctx.editor && typeof content === 'string') setEditorWithCursor(content);
+  if (typeof ctx.recomputeOwnerBaseline === 'function') ctx.recomputeOwnerBaseline();
   ctx.state.version = res.version || ctx.state.version;
   return res;
 }
@@ -801,6 +802,10 @@ export async function init() {
       if (ctx.suppress) return;
       if (transaction && (transaction.origin === 'local-editor' || transaction.origin === 'seed')) return;
       setEditorWithCursor(ctx.ytext.toString());
+      // A remote update may have changed owner-marked content (e.g. the owner
+      // edited protected text). Refresh the baseline the protect guard reverts
+      // to, so the participant's next edit isn't measured against stale state.
+      if (typeof ctx.recomputeOwnerBaseline === 'function') ctx.recomputeOwnerBaseline();
     });
 
     ctx.editor.addEventListener('input', () => {

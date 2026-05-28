@@ -2,6 +2,55 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.3.7] - 2026-05-28
+
+Haertung des Schutz-Modus. Ausloeser: ein Schueler konnte gelb
+markierten Trainer-Text mittendrin loeschen (markieren + tippen). Der
+Review fand mehrere Wege, auf denen Teilnehmer-Eingaben am rein
+praeventiven `beforeinput`-Guard vorbei den geschuetzten Inhalt
+veraendern konnten.
+
+### Fixed
+- **Einfuegen (Paste) war fuer Teilnehmer ungeschuetzt.** `handlePaste`
+  fuehrt sein eigenes `deleteContents()` + Insert aus und umging damit
+  den `beforeinput`-Guard komplett. Teilnehmer-Paste, das Owner-Inhalt
+  beruehrt/verdraengt, wird jetzt blockiert
+  (`editor/clipboard.js` + neue Hilfsfunktion `participantInsertBlocked`).
+- **Composition-Eingaben (`insertCompositionText`) wurden nicht erfasst.**
+  Auf Tablets/Chromebooks/iOS sowie bei Autokorrektur und macOS-
+  Akzentmenue laeuft Tippen ueber Composition-Events — diese fielen
+  durch alle Pruefungen. Jetzt im Insert-Zweig des Guards behandelt.
+- **Rechtschreib-/Autokorrektur (`insertReplacementText`)** wurde gegen
+  die Auswahl statt gegen `getTargetRanges()` geprueft und konnte so
+  Owner-Text ersetzen. Insert-Zweig prueft jetzt die Target-Ranges.
+- **Undo/Redo umging den Schutz.** Strg+Z/Y eines Teilnehmers konnte den
+  Owner-Inhalt auf einen frueheren Stand zuruecksetzen. `history.js`
+  blockt jetzt History-Schritte, die die Owner-Text-Signatur aendern.
+- **`rangeTouchesOwner` ist jetzt fail-closed**, wenn `intersectsNode`
+  fehlt.
+
+### Added
+- **Reconciliation-Schutznetz** (`editor/protect-guard.js`): Da
+  `beforeinput` nicht auf allen Engines abbrechbar ist (insbesondere
+  mobile Tastaturen), wird der Owner-markierte Text bei jedem
+  Teilnehmer-`input` mit einer bekannten guten Baseline verglichen und
+  bei einer Abweichung der letzte gute Stand wiederhergestellt — das
+  greift auch fuer jeden bisher nicht abgefangenen Eingabeweg. Die
+  Baseline wird ueber `ctx.recomputeOwnerBaseline` bei Schutz-Aktivierung,
+  Remote-Updates und initialem Laden aktualisiert
+  (`ui/protect.js`, `network/collaboration.js`).
+- Protect-E2E (`tests/e2e/run_space_protect_e2e.mjs`) auf den
+  3-Stufen-Mode-Switch aktualisiert (der alte `#lockToggle`/
+  `#protectToggle`-Owner-Flow aus v1.3.0 war seit v1.3.1 obsolet) und um
+  Assertions fuer Paste-Block und Reconciliation-Revert erweitert
+  (17 gruene Checks, stabil ueber mehrere Laeufe).
+
+### Known limitations
+- Die Durchsetzung bleibt clientseitig (Reconciliation + Guard). Eine
+  serverseitige Relay-Pruefung der Yjs-Updates gegen Owner-Bereiche —
+  Verteidigung gegen *manipulierte* Clients, nicht gegen normale
+  Teilnehmer — steht weiterhin aus (analog zum Lock-Defence-in-Depth).
+
 ## [1.3.1] - 2026-05-27
 
 Iterative UX- und Bugfix-Runde am Append-Only-Schutz aus v1.3.0.

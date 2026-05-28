@@ -15,6 +15,7 @@ import {
 } from '../services/selection.js';
 import { pushUndoSnapshot } from '../services/history.js';
 import { normalizeEditorMarkupPreserveSelection } from './inline-format.js';
+import { participantInsertBlocked } from './protect-guard.js';
 
 const OWNER_TEXT_CLASS = 'mz-owner-text';
 const OWNER_SELECTOR = '.' + OWNER_TEXT_CLASS;
@@ -200,6 +201,20 @@ function handlePaste(evt) {
   const clip = evt.clipboardData || (window.clipboardData);
   if (!clip) return;
   evt.preventDefault();
+
+  // Append-only protection: a participant must not paste over, into, or
+  // ahead of owner-marked content. This handler performs its own manual
+  // delete+insert, so it bypasses the beforeinput guard and needs its own
+  // check. The owner may paste freely (their paste is wrapped as owner text).
+  if (ctx.appendOnly && !ctx.isOwner) {
+    const protSel = window.getSelection && window.getSelection();
+    const protRange = protSel && protSel.rangeCount ? protSel.getRangeAt(0) : null;
+    if (!protRange || participantInsertBlocked(protRange)) {
+      if (typeof ctx.showProtectToast === 'function') ctx.showProtectToast('space.protect.toast.modify');
+      return;
+    }
+  }
+
   let html = '';
   let plain = '';
   try { html = clip.getData('text/html') || ''; } catch (e) {}

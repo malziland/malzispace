@@ -13,6 +13,11 @@
  * toggle is off, this module is a no-op.
  */
 import ctx from '../core/context.js';
+import {
+  getEditorSelectionOffsets,
+  restoreEditorSelection,
+  getEditorStoredContent,
+} from '../services/selection.js';
 
 const OWNER_TEXT_CLASS = 'mz-owner-text';
 const OWNER_SELECTOR = '.' + OWNER_TEXT_CLASS;
@@ -41,8 +46,12 @@ function rangeTouchesOwner(range) {
   if (endEl && endEl.closest && endEl.closest(OWNER_SELECTOR)) return true;
   // Non-collapsed selection: walk owner spans and test for real overlap.
   const owners = ctx.editor.querySelectorAll(OWNER_SELECTOR);
+  if (!owners.length) return false;
+  // Fail closed: if we can't reliably test overlap (no intersectsNode), treat
+  // a multi-point selection that spans owner-marked content as touching.
+  if (typeof range.intersectsNode !== 'function') return true;
   for (const o of owners) {
-    if (range.intersectsNode && range.intersectsNode(o)) return true;
+    if (range.intersectsNode(o)) return true;
   }
   return false;
 }
@@ -388,6 +397,89 @@ function insertTextAtOwnerBoundary(boundary, text) {
   return true;
 }
 
+/**
+ * True if a participant text/content insertion at `range` must be blocked
+ * because it would modify, split, or wedge owner-marked content. Shared by
+ * the `beforeinput` guard and the explicit paste handler (which bypasses
+ * `beforeinput`). Does not implement the boundary-redirect exception — that
+ * is specific to single-character typing in the keydown path.
+ */
+export function participantInsertBlocked(range) {
+  if (!range) return false;
+  if (rangeTouchesOwner(range)) return true;
+  const block = getContainingBlock(range.startContainer);
+  if (block && block.querySelector(OWNER_SELECTOR) && laterBlockHasOwner(range)) return true;
+  if (ownerInSameBlockAfterCursor(range)) return true;
+  return false;
+}
+
+// ── Reconciliation: restore owner content if anything slips through ──
+
+// The `beforeinput` guard is preventive, but it cannot stop every path:
+// non-cancelable composition events (Android/Chromebook soft keyboards),
+// IME, or any future browser quirk can mutate owner content before we get a
+// chance to cancel. This safety net snapshots the owner-marked text and, on
+// each participant input, restores the last good DOM if that text changed.
+let lastGoodHtml = '';
+let lastGoodOwnerText = '';
+let lastGoodCaret = { start: 0, end: 0 };
+
+/** Concatenated text of all owner spans, in document order. Invariant under
+ *  every legitimate participant edit (which never touches owner content). */
+function ownerTextSignature(root) {
+  const spans = (root || ctx.editor).querySelectorAll(OWNER_SELECTOR);
+  let out = '';
+  // Normalize zero-width / nbsp the same way input-normalization does, so a
+  // structural-only normalization pass is not mistaken for a content change.
+  for (const sp of spans) out += (sp.textContent || '').replace(/​/g, '').replace(/ /g, ' ');
+  return out;
+}
+
+function captureCaret() {
+  try { return getEditorSelectionOffsets(); } catch (e) { return { start: 0, end: 0 }; }
+}
+
+/**
+ * Re-establish the "known good" baseline from the current DOM. Called after
+ * any authoritative content change the participant did not make: protection
+ * turning on, a remote (owner) CRDT update, or initial load.
+ */
+export function recomputeOwnerBaseline() {
+  if (!ctx.editor) return;
+  lastGoodHtml = ctx.editor.innerHTML;
+  lastGoodOwnerText = ownerTextSignature(ctx.editor);
+  lastGoodCaret = captureCaret();
+}
+
+function reconcileParticipantInput() {
+  if (!ctx.appendOnly || ctx.isOwner) return;
+  if (ctx.applyingProtectRestore) return;
+  const sig = ownerTextSignature(ctx.editor);
+  if (sig === lastGoodOwnerText) {
+    // Owner content intact → this was a legitimate participant edit. Adopt
+    // the new DOM as the baseline to revert to next time.
+    lastGoodHtml = ctx.editor.innerHTML;
+    lastGoodCaret = captureCaret();
+    return;
+  }
+  // Owner content was modified by a participant — undo the whole operation.
+  // This runs before the CRDT-sync input listener (registered later during
+  // async init), so the bad state never reaches Y.Text or peers.
+  ctx.applyingProtectRestore = true;
+  try {
+    ctx.editor.innerHTML = lastGoodHtml;
+    restoreEditorSelection(lastGoodCaret.start, lastGoodCaret.end);
+    // Keep the bad transient out of the command history stack.
+    ctx.lastKnownStoredForHistory = getEditorStoredContent();
+  } catch (err) {
+    diag('part.reconcile-error');
+  } finally {
+    ctx.applyingProtectRestore = false;
+  }
+  toast('space.protect.toast.modify');
+  diag('part.reconcile-revert');
+}
+
 // ── Owner-mode: wrap typed text in `.mz-owner-text` ─────────────
 
 function wrapOwnerInsert(e) {
@@ -497,7 +589,8 @@ function blockIfProtected(e) {
 
   const isParaCreating = it === 'insertParagraph' || it === 'insertLineBreak';
   const isTextInsert = it === 'insertText' || it === 'insertFromPaste'
-    || it === 'insertFromDrop' || it === 'insertReplacementText';
+    || it === 'insertFromDrop' || it === 'insertReplacementText'
+    || it === 'insertCompositionText';
   const isFormat = it.startsWith('format');
   const isDelete = it.startsWith('delete');
 
@@ -541,6 +634,23 @@ function blockIfProtected(e) {
   // protected content without modifying it. The same-block displacement
   // check below still catches "owner content to the right of the caret".
   if (isTextInsert) {
+    // Replacement/composition/IME report the text they will overwrite in
+    // getTargetRanges(), not the collapsed selection. Check those first so an
+    // autocorrect or suggestion can't silently replace owner content.
+    const insertTargets = e.getTargetRanges ? e.getTargetRanges() : [];
+    for (const sr of insertTargets) {
+      const r = document.createRange();
+      try {
+        r.setStart(sr.startContainer, sr.startOffset);
+        r.setEnd(sr.endContainer, sr.endOffset);
+      } catch (err) { continue; }
+      if (!r.collapsed && rangeTouchesOwner(r)) {
+        e.preventDefault();
+        toast('space.protect.toast.modify');
+        diag(`part.block-modify(${it}, insert-target-range)`);
+        return true;
+      }
+    }
     if (rangeTouchesOwner(range)) {
       // Caret at the END boundary of an owner span: redirect only if NO
       // further trainer content follows in any subsequent block. Otherwise
@@ -659,6 +769,9 @@ function blockClipboardOrDrag(e) {
 export function initProtectGuard() {
   if (!ctx.editor) return;
 
+  ctx.applyingProtectRestore = false;
+  ctx.recomputeOwnerBaseline = recomputeOwnerBaseline;
+
   ctx.editor.addEventListener('beforeinput', (e) => {
     // Owner inserting plain text → wrap as owner content.
     if (wrapOwnerInsert(e)) return;
@@ -666,9 +779,18 @@ export function initProtectGuard() {
     blockIfProtected(e);
   });
 
+  // Safety net: if any input slipped past the preventive guard above (e.g.
+  // non-cancelable composition on mobile keyboards) and changed owner
+  // content, restore it. Registered here — before the CRDT-sync input
+  // listener added later in collaboration.init — so the bad state never
+  // propagates to Y.Text or other peers.
+  ctx.editor.addEventListener('input', reconcileParticipantInput);
+
   // Cut/paste/drag don't fire `beforeinput` for the deletion side reliably
   // across browsers — handle them explicitly.
   ['cut', 'paste', 'drop', 'dragstart'].forEach((evt) => {
     ctx.editor.addEventListener(evt, blockClipboardOrDrag);
   });
+
+  recomputeOwnerBaseline();
 }
