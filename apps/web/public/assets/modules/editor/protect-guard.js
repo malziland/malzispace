@@ -440,12 +440,32 @@ function captureCaret() {
 }
 
 /**
+ * Keep a writable area available for participants: if the LAST top-level block
+ * is owner-marked, there is nowhere to write below the protected text (and
+ * pressing Enter directly at it is forbidden). Append one empty editable
+ * paragraph so the participant always has a free line at the bottom. Local and
+ * idempotent; the empty paragraph carries no owner marking.
+ */
+function ensureTrailingWritableLine() {
+  if (!ctx.editor || !ctx.appendOnly || ctx.isOwner) return;
+  const last = ctx.editor.lastElementChild;
+  if (!last) return;
+  const lastIsOwner = (last.classList && last.classList.contains(OWNER_TEXT_CLASS))
+    || (last.querySelector && last.querySelector(OWNER_SELECTOR));
+  if (!lastIsOwner) return;
+  const p = document.createElement('p');
+  p.appendChild(document.createElement('br'));
+  ctx.editor.appendChild(p);
+}
+
+/**
  * Re-establish the "known good" baseline from the current DOM. Called after
  * any authoritative content change the participant did not make: protection
  * turning on, a remote (owner) CRDT update, or initial load.
  */
 export function recomputeOwnerBaseline() {
   if (!ctx.editor) return;
+  ensureTrailingWritableLine();
   lastGoodHtml = ctx.editor.innerHTML;
   lastGoodOwnerText = ownerTextSignature(ctx.editor);
   lastGoodCaret = captureCaret();
@@ -481,6 +501,7 @@ function reconcileNow(source) {
     ctx.applyingProtectRestore = true;
     try {
       ctx.setEditorWithCursor(stored);
+      ensureTrailingWritableLine();
       ctx.lastKnownStoredForHistory = getEditorStoredContent();
     } catch (err) {
       diag('part.reconcile-error');
@@ -684,52 +705,24 @@ function blockIfProtected(e) {
         return true;
       }
     }
+    // Caret on/at owner content (inside the span OR exactly at its start/end
+    // boundary) → blocked. Per spec, nothing may be typed directly attached to
+    // protected text; participants write only in genuinely free lines.
     if (rangeTouchesOwner(range)) {
-      // Caret at the END boundary of an owner span: redirect only if NO
-      // further trainer content follows in any subsequent block. Otherwise
-      // appending here would wedge participant text into a trainer region
-      // (between two owner blocks). The participant must move into an empty
-      // line between blocks, or below the last trainer block, to write.
-      if (it === 'insertText' && typeof e.data === 'string' && e.data.length) {
-        const boundary = findOwnerBoundary(range);
-        if (boundary
-            && boundary.position === 'after'
-            && !ownerInSameBlockAfterCursor(range)
-            && !laterBlockHasOwner(range)) {
-          e.preventDefault();
-          insertTextAtOwnerBoundary(boundary, e.data);
-          diag(`part.redirect-after(${it}) "${e.data}"`);
-          return true;
-        }
-      }
       e.preventDefault();
       toast('space.protect.toast.modify');
       diag(`part.block-modify(${it})`);
       return true;
     }
-    // Wedged between two trainer regions: the caret sits outside any owner
-    // span, BUT its containing block already has owner content AND more
-    // trainer content follows in a later block. Typing here would let the
-    // participant extend a piece of plain text that lives in the gap of a
-    // trainer paragraph — exactly what user demoed 2026-05-27 line 11
-    // ("Schüler:in 4: hnhgnghnhbgnghn"). Block it. Note: an empty block
-    // (no owner content of its own) sitting between two trainer blocks
-    // does NOT match this condition and remains writable.
+    // Strict rule: typing is allowed ONLY in a block that contains NO owner
+    // content (a genuinely free/empty line, or a participant's own line).
+    // Any block that holds protected text is off-limits — a participant may
+    // not append before or after the yellow text on the same line.
     const blockHere = getContainingBlock(range.startContainer);
-    if (blockHere && blockHere.querySelector(OWNER_SELECTOR) && laterBlockHasOwner(range)) {
+    if (blockHere && blockHere.querySelector(OWNER_SELECTOR)) {
       e.preventDefault();
       toast('space.protect.toast.modify');
-      diag(`part.block-wedged(${it})`);
-      return true;
-    }
-    // Same-block displacement: typing here would push owner content right
-    // within the SAME block. Cross-block typing (e.g. in an empty line that
-    // sits between two trainer blocks) is fine — it doesn't push the next
-    // block down, it just fills the existing gap.
-    if (ownerInSameBlockAfterCursor(range)) {
-      e.preventDefault();
-      toast('space.protect.toast.displace');
-      diag(`part.block-displace(${it})`);
+      diag(`part.block-owner-block(${it})`);
       return true;
     }
     diag(`part.pass(${it}) "${e.data || ''}"`);
@@ -769,13 +762,15 @@ function blockIfProtected(e) {
     // into the new block, trapping the caret inside an empty owner span
     // where every subsequent input is treated as an owner-edit and blocked.
     const containingBlock = getContainingBlock(range.startContainer);
-    if (containingBlock && containingBlock.querySelector(OWNER_SELECTOR)) {
-      // preventDefault BEFORE mutating: some engines (WebKit/Safari) otherwise
-      // still run the native paragraph split and clone the owner span,
-      // doubling protected text.
+    if (isInsideOwnerSpan(range.startContainer)
+        || (containingBlock && containingBlock.querySelector(OWNER_SELECTOR))) {
+      // Enter directly at/in protected text (including the end boundary of an
+      // owner line) is forbidden. Participants press Enter only in a free line
+      // (e.g. the auto-maintained writable line below the last protected
+      // block). Fully block — never create or split anything here.
       e.preventDefault();
-      insertCleanParagraphAfterCaret(range);
-      diag('part.clean-newline');
+      toast('space.protect.toast.modify');
+      diag('part.block-enter(owner-block)');
       return true;
     }
     diag('part.pass-enter');

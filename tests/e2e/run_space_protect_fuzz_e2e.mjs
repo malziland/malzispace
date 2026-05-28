@@ -112,6 +112,24 @@ function selectInsideOwner(page) {
   });
 }
 
+/** Place the caret in the last top-level block (the auto free line). Returns
+ *  true only if that block carries no owner content (i.e. it is writable). */
+function placeCaretInTail(page) {
+  return page.evaluate(() => {
+    const ed = document.getElementById('editor');
+    ed.focus();
+    const last = ed.lastElementChild;
+    if (!last) return false;
+    const r = document.createRange();
+    r.selectNodeContents(last);
+    r.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(r);
+    return !(last.querySelector && last.querySelector('.mz-owner-text'))
+      && !(last.classList && last.classList.contains('mz-owner-text'));
+  });
+}
+
 async function setupOwner(stack) {
   const ownerBrowser = await launchChromiumBrowser({
     args: ['--disable-features=LocalNetworkAccessChecks,BlockInsecurePrivateNetworkRequests,PrivateNetworkAccessFromInsecureSubresources']
@@ -185,49 +203,57 @@ async function runEngine(engineName, browserType, stack, readerUrl) {
 
     const editorText = () => page.evaluate(() => document.getElementById('editor').textContent || '');
 
-    // POSITIVE CONTROLS — prove the participant CAN write in an allowed area
-    // and that the real keyboard/clipboard pipeline actually inserts. If these
-    // fail, the "blocked over owner" results below would be meaningless no-ops.
-    // A participant appends after the owner text (the allowed boundary).
-    await placeCaretInOwner(page, 1); // caret at the end boundary of owner text
-    await page.keyboard.press('End');
-    await page.keyboard.type('PARTICIPANTOK', { delay: 15 });
-    await page.waitForTimeout(150);
-    if (!/PARTICIPANTOK/.test(await editorText())) {
-      // Known WebKit/Safari limitation: it ignores preventDefault and inserts
-      // the typed char INTO the owner span, which the CRDT owner-text invariant
-      // correctly refuses — so typing exactly at the owner boundary does not
-      // append on WebKit (paste does; writing in a separate line does). This is
-      // a consequence of correct protection, not a protection breach, so it is
-      // informational on WebKit and a hard requirement on Chromium.
-      if (engineName === 'webkit') {
-        console.log(`[${engineName}] NOTE: typing exactly at the owner boundary does not append on WebKit (documented limitation; paste works).`);
-      } else {
-        fail(`${engineName}_control_type_allowed - participant typing did NOT register (test pipeline broken)`);
-      }
-    } else {
-      pass(`${engineName}_control_type_allowed - participant can append after owner`);
-    }
-    try { await page.evaluate(() => navigator.clipboard.writeText('PASTEOK')); } catch (e) {}
-    await page.keyboard.press('End');
-    await page.keyboard.press(`${MOD}+v`);
-    await page.waitForTimeout(150);
-    if (!/PASTEOK/.test(await editorText())) {
-      console.log(`[${engineName}] NOTE: real clipboard paste did not insert in allowed area — paste-over-owner check is not conclusive on this engine.`);
-    } else {
-      pass(`${engineName}_control_paste_allowed - real paste inserts in allowed area`);
-    }
-
     const checkUnchanged = async (label) => {
       const now = await getOwnerText(page);
       if (now !== original) {
         fail(`${engineName}_${label} - owner text CHANGED: "${original}" -> "${now}"`);
-        // re-sync baseline so later sub-checks still report their own deltas
         return false;
       }
       pass(`${engineName}_${label} - owner text intact`);
       return true;
     };
+
+    // Spec: a participant may NOT attach to protected text. There must be an
+    // auto-maintained free line below the last protected block where they
+    // write. Verify that free line exists and is writable in BOTH engines.
+    const tailWritable = await placeCaretInTail(page);
+    if (!tailWritable) {
+      fail(`${engineName}_free_line_exists - no writable free line below protected block`);
+    } else {
+      pass(`${engineName}_free_line_exists - auto free line present below owner`);
+    }
+    // Click the last block too (a real user click), so the caret is reliably
+    // in the free line even on engines that ignore a JS-set selection.
+    try { await page.locator('#editor > *:last-child').click(); } catch (e) {}
+    await page.keyboard.type('PARTICIPANTOK', { delay: 15 });
+    await page.waitForTimeout(150);
+    if (!/PARTICIPANTOK/.test(await editorText())) {
+      fail(`${engineName}_control_type_in_free_line - participant could NOT write in the free line`);
+    } else {
+      pass(`${engineName}_control_type_in_free_line - participant writes in the free line`);
+    }
+    try { await page.evaluate(() => navigator.clipboard.writeText('PASTEOK')); } catch (e) {}
+    await page.keyboard.press(`${MOD}+v`);
+    await page.waitForTimeout(150);
+    if (!/PASTEOK/.test(await editorText())) {
+      console.log(`[${engineName}] NOTE: real clipboard paste did not insert in the free line on this engine.`);
+    } else {
+      pass(`${engineName}_control_paste_in_free_line - real paste inserts in the free line`);
+    }
+    await checkUnchanged('free_line_writes_keep_owner_intact');
+
+    // NEGATIVE: typing/Enter directly at the owner boundary must NOT attach.
+    await placeCaretInOwner(page, 1); // end boundary of owner text
+    await page.keyboard.type('XSHOULDNOTSTICK', { delay: 12 });
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('YSHOULDNOTSTICK', { delay: 12 });
+    await page.waitForTimeout(150);
+    await checkUnchanged('no_attach_at_owner_boundary');
+    if (/SHOULDNOTSTICK/.test(await editorText())) {
+      fail(`${engineName}_no_attach_at_owner_boundary_text - text attached at owner boundary (must be blocked)`);
+    } else {
+      pass(`${engineName}_no_attach_at_owner_boundary_text - boundary typing/Enter blocked`);
+    }
 
     // 1) Type into the middle of owner text.
     await placeCaretInOwner(page, 0.5);

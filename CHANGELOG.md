@@ -2,6 +2,29 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.4.0-rc2] - 2026-05-28
+
+Korrigiert das Schutz-Verhalten auf die urspruengliche Anforderung: an
+geschuetztem Text darf NICHTS direkt angehaengt werden.
+
+### Changed
+- **Kein Anhaengen an geschuetzten Text.** Direkt an markiertem (gelbem)
+  Text ist weder Tippen noch Enter noch Einfuegen moeglich — auch nicht am
+  Zeilenende. Teilnehmer schreiben ausschliesslich in echten **freien
+  Zeilen**: leere Zeile zwischen Bloecken oder im freien Bereich darunter.
+  (Vorher erlaubte der Guard faelschlich das Anhaengen nach dem letzten
+  Owner-Span und Enter am Owner-Ende.)
+- **Automatische freie Schreibzeile.** Ist der letzte Block geschuetzt,
+  haelt das System fuer Teilnehmer automatisch eine leere, beschreibbare
+  Zeile darunter bereit, damit immer Schreibplatz vorhanden ist.
+
+### Tests
+- Fuzz-E2E (`npm run test:e2e:protect:fuzz`) auf die neue Spec erweitert:
+  prueft, dass die freie Zeile existiert und in Chromium UND WebKit
+  beschreibbar ist, und dass Tippen/Enter exakt an der Owner-Grenze
+  blockiert wird. Owner-Text bleibt unter allen Angriffen + 140 Zufalls-
+  aktionen intakt.
+
 ## [1.4.0-rc1] - 2026-05-28
 
 Release Candidate. Buendelt die Safari/WebKit-Schutzhaertung (siehe 1.3.7)
