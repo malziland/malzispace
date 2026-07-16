@@ -78,5 +78,8 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Install Firebase CLI (lock-flow E2E emulator stack, step 11/11)
+        run: npm install -g firebase-tools@15.24.0
+
       - name: Verify
         run: ./ops/verify_local.sh
