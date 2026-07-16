@@ -27,4 +27,5 @@ Two layers (UI-profile requirement, see `docs/adr/ADR-0001-baseline-stack-and-pr
 | Date | Scope | Result |
 |---|---|---|
 | 2026-07-16 | Automated layer (axe + keyboard paths, Chromium) | green — 0 serious/critical; advisories: landmarks/region structure, no `<h1>` on editor page (logged, non-gating). Fixed on this date: 2× `aria-prohibited-attr` (`role="status"` on #status, `role="img"` on info icon), 1× `color-contrast` (hero-lock label opacity .55 → .8) |
-| 2026-07-16 | Manual checklist | **open — to be performed by the maintainer** (items above) |
+| 2026-07-16 | Full checklist, scripted execution (Playwright/Chromium against the local emulator stack) | green 9/9: tab order + visible focus on every landing stop, keyboard-only space creation, keyboard toolbar formatting, mode-switch segments keyboard-operable, QR modal Esc-close with focus return, 200%-zoom reflow (landing + editor, 0px overflow). Findings fixed same day: `outline:none` without focus replacement on `input[type=text]` and `.hero-lock-info` (now `:focus-visible` outlines, also `.title`), and toolbar selection preservation was mouse-only (`mousedown`) — a `focusin` hook now saves the editor range for keyboard activation |
+| open | VoiceOver pass (macOS, `Cmd+F5`) over landing + editor | **optional, genuinely manual — maintainer** (cannot be scripted) |

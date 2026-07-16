@@ -19,9 +19,10 @@ paths = [
 # Historical pre-launch commits, triaged 2026-07-16:
 # - bafeed42: same public Firebase web key at the old public/ path.
 # - f2e53136: early prototype with the web key inlined in HTML plus a
-#   config.php generic key; the files no longer exist. Whether that legacy
-#   key is still valid anywhere is tracked as an open maintenance item
-#   (rotation is the real fix — history rewriting is not).
+#   config.php generic key. Triaged 2026-07-16: symmetric at-rest key of the
+#   retired pre-Firebase PHP prototype; zero references in HEAD, prototype
+#   data expired by design. Residual risk only if the old PHP webspace still
+#   exists — decommissioning to be confirmed by the maintainer.
 commits = [
   "bafeed42c128b0e3911d94bd0d4025b469d062e3",
   "f2e531366966e6901ec96b456e29ba46b238d283",

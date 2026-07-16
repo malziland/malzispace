@@ -23,6 +23,17 @@ Accessibility-Fixes und der entfernte tote Link auf `reset-cache.html`.
 - **Accessibility (axe, serious):** Verbindungs-Status-Punkt ohne gueltige
   ARIA-Semantik (`role="status"` ergaenzt), Info-Icon der Sperr-Checkbox
   (`role="img"`), Kontrast des Sperr-Labels auf der Startseite (AA erfuellt).
+- **Tastatur-Bedienbarkeit** (Funde des skriptgesteuerten Smoketests):
+  Titel-Eingabe und Info-Icon hatten `outline:none` ohne sichtbaren
+  Fokus-Ersatz (jetzt `:focus-visible`-Outlines, auch fuer den Space-Titel);
+  Toolbar-Formatierung war faktisch mouse-only, weil die Selection nur bei
+  `mousedown` gesichert wurde — ein `focusin`-Hook deckt jetzt den
+  Tastatur-Pfad (Tab + Enter formatiert korrekt).
+- **NBSP-Signatur-Inkonsistenz im Schutz-Modus:** Die Stored-HTML-Varianten
+  der Owner-Signatur normalisierten `&nbsp;` nicht (No-op-Replace, verlorenes
+  NBSP im Quelltext), die DOM-Variante schon — Owner-Text mit `&nbsp;`
+  erzeugte Dauer-Mismatches und unnoetiges Reconciling. Alle Extraktoren
+  normalisieren jetzt identisch.
 
 ### Added
 - **Accessibility-E2E** `npm run test:e2e:a11y` (axe-core + Tastatur-Pfade)
