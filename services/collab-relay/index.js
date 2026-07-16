@@ -1,7 +1,9 @@
 'use strict';
 
 const http = require('http');
-const admin = require('firebase-admin');
+// firebase-admin v14 removed the legacy namespace API — modular imports only.
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const WebSocket = require('ws');
 
 const { getTrustedClientIp } = require('./lib/clientIp');
@@ -10,8 +12,8 @@ const { sanitizeRoom } = require('./lib/room');
 const { parseAllowedOrigins, isOriginAllowed } = require('./lib/origin');
 const { verifyWsAuthQuery } = require('./lib/wsAuth');
 
-admin.initializeApp();
-const db = admin.firestore();
+initializeApp();
+const db = getFirestore();
 
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
