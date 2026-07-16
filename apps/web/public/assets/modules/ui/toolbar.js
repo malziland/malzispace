@@ -158,4 +158,14 @@ export function initToolbar() {
     preserveToolbarSelection(evt);
   });
   ctx.editorToolbar?.addEventListener('mousedown', preserveToolbarSelection);
+
+  // Keyboard path: Tab moves real focus onto the button (no pointerdown), but
+  // the document selection still points into the editor at focusin time.
+  // Persist it so Enter/Space-triggered commands format the right range —
+  // saveEditorRange() is a no-op when the selection is not inside the editor.
+  ctx.editorToolbar?.addEventListener('focusin', (evt) => {
+    const btn = closestFromEventTarget(evt.target, 'button[data-cmd],button[data-action]');
+    if (!btn || ctx.expiredShown) return;
+    saveEditorRange();
+  });
 }

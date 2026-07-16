@@ -203,6 +203,11 @@ a{color:#dbeafe;text-decoration:none}
 }
 .hero-lock-info:hover,
 .hero-lock-info:focus{ opacity:.9; }
+/* Keyboard focus must be visible (WCAG 2.4.7) — opacity alone is not. */
+.hero-lock-info:focus-visible{
+  outline:2px solid var(--accent, #38bdf8);
+  outline-offset:2px;
+}
 .hero-lock-info svg{
   width:16px;
   height:16px;
@@ -286,6 +291,10 @@ input[type=text]{
   outline:none;
 }
 input[type=text]::placeholder{ color:#999; }
+input[type=text]:focus-visible{
+  outline:2px solid var(--accent, #38bdf8);
+  outline-offset:2px;
+}
 
 .btn{
   appearance:none;

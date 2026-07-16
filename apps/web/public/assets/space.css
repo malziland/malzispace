@@ -177,6 +177,10 @@ body.is-readonly #editorToolbar [data-action]{
   font-weight:600;
 }
 .title.readonly{ outline:none; border:none; }
+.title:not([hidden]):focus-visible{
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 /* ── Status ── */
 .pill{
