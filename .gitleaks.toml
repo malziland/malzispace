@@ -1,0 +1,28 @@
+# Gitleaks configuration — reviewed exceptions only.
+# Context: docs/SECURITY-MODEL.md. Every entry needs a reason.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Reviewed exceptions"
+
+# Firebase web API keys are public by design: they ship to every browser and
+# access control is App Check + backend security rules, not key secrecy.
+# The repo hygiene check (tools/checks/check_repo_hygiene.mjs) independently
+# restricts where such keys may appear.
+paths = [
+  '''apps/web/public/assets/config\.js''',
+  '''tests/live/run_smoke_with_temp_debug_token\.mjs''',
+]
+
+# Historical pre-launch commits, triaged 2026-07-16:
+# - bafeed42: same public Firebase web key at the old public/ path.
+# - f2e53136: early prototype with the web key inlined in HTML plus a
+#   config.php generic key; the files no longer exist. Whether that legacy
+#   key is still valid anywhere is tracked as an open maintenance item
+#   (rotation is the real fix — history rewriting is not).
+commits = [
+  "bafeed42c128b0e3911d94bd0d4025b469d062e3",
+  "f2e531366966e6901ec96b456e29ba46b238d283",
+]
