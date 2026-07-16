@@ -4,22 +4,21 @@ const crypto = require('crypto');
 const express = require('express');
 const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const admin = require('firebase-admin');
-// firebase-admin v13 dropped reliable access to FirestoreTimestamp /
-// FirestoreFieldValue from the namespace style — pull them from the
-// modular subpath instead.
-const { Timestamp: FirestoreTimestamp, FieldValue: FirestoreFieldValue } = require('firebase-admin/firestore');
-const { ServerValue: DatabaseServerValue } = require('firebase-admin/database');
+// firebase-admin v14 removed the legacy namespace API — modular imports only.
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, Timestamp: FirestoreTimestamp, FieldValue: FirestoreFieldValue } = require('firebase-admin/firestore');
+const { getDatabase, ServerValue: DatabaseServerValue } = require('firebase-admin/database');
+const { getAppCheck } = require('firebase-admin/app-check');
 const { RateLimiter } = require('./lib/rateLimiter');
 const { getTrustedClientIp } = require('./lib/clientIp');
 const { randomChallenge, normalizeNonce, verifyPow } = require('./lib/appCheckPow');
 const { parseAllowedOrigins, isOriginAllowed, normalizeOrigin } = require('./lib/originPolicy');
 const { estimatePayloadBudgetCost } = require('./lib/payloadBudget');
 
-admin.initializeApp();
+initializeApp();
 
-const db = admin.firestore();
-const rtdb = admin.database();
+const db = getFirestore();
+const rtdb = getDatabase();
 
 const TTL_SECONDS = 24 * 60 * 60;
 const ID_RE = /^[a-z0-9]{6,24}$/;
@@ -311,7 +310,7 @@ async function verifyAppCheck(req, res, next) {
   const token = req.header('X-Firebase-AppCheck');
   if (!token) return sendJson(res, 401, { error: 'app_check_required' });
   try {
-    const result = await admin.appCheck().verifyToken(token);
+    const result = await getAppCheck().verifyToken(token);
     if (result.appId && !isAllowedAppCheckAppId(result.appId)) {
       return sendJson(res, 401, { error: 'app_check_invalid' });
     }
@@ -397,7 +396,7 @@ router.post('/appcheck/token', async (req, res) => {
       return sendJson(res, 400, { error: 'invalid_pow' });
     }
 
-    const issued = await admin.appCheck().createToken(appId, { ttlMillis: APP_CHECK_TOKEN_TTL_MS });
+    const issued = await getAppCheck().createToken(appId, { ttlMillis: APP_CHECK_TOKEN_TTL_MS });
     return sendJson(res, 200, {
       token: issued.token,
       expireTimeMillis: Date.now() + issued.ttlMillis
