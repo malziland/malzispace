@@ -30,6 +30,23 @@ const publicFirebaseApiKeyAllowlist = new Set([
   'tests/live/run_smoke_with_temp_debug_token.mjs'
 ]);
 
+// Reviewed exceptions to the inline-violation rules below. CSP context:
+// firebase.json ships style-src 'unsafe-inline' (inline <style> works) and
+// CSSOM mutations (el.style.prop = ...) are not restricted by CSP at all —
+// these rules are stricter house style, so exceptions need a reason here.
+const inlineViolationAllowlist = new Set([
+  // Cache-escape page must be fully self-contained: an external stylesheet
+  // could be exactly the stale/broken asset the page exists to escape from.
+  'apps/web/public/reset-cache.html: inline <style> block',
+  // Update banner injects its own UI before any stylesheet is guaranteed fresh.
+  'apps/web/public/assets/version-check.js: DOM style mutation',
+  // Line-number gutter mirrors measured per-line pixel heights; measured
+  // values cannot live in a static stylesheet.
+  'apps/web/public/assets/modules/editor/line-numbers.js: DOM style mutation',
+  // Dev-only diagnostic overlay (?diag=1), positions itself at runtime.
+  'apps/web/public/assets/modules/dev/protect-diag.js: DOM style mutation'
+]);
+
 const inlineViolationMatchers = [
   {
     label: 'inline <style> block',
@@ -102,7 +119,8 @@ for (const relPath of tracked) {
   for (const matcher of inlineViolationMatchers) {
     if (!matcher.paths.some((pattern) => pattern.test(relPath))) continue;
     if (matcher.regex.test(text)) {
-      findings.push(`${relPath}: ${matcher.label}`);
+      const finding = `${relPath}: ${matcher.label}`;
+      if (!inlineViolationAllowlist.has(finding)) findings.push(finding);
     }
   }
 }
