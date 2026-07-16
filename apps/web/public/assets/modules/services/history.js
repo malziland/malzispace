@@ -16,7 +16,7 @@ function ownerTextOf(storedHtml) {
   tpl.innerHTML = typeof storedHtml === 'string' ? storedHtml : '';
   let out = '';
   tpl.content.querySelectorAll('.mz-owner-text').forEach((sp) => {
-    out += (sp.textContent || '').replace(/\u200B/g, '').replace(/ /g, ' ');
+    out += (sp.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ');
   });
   return out;
 }

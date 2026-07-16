@@ -351,7 +351,7 @@ function ownerTextFromStored(storedHtml) {
   tpl.innerHTML = typeof storedHtml === 'string' ? storedHtml : '';
   let out = '';
   tpl.content.querySelectorAll(OWNER_SELECTOR).forEach((sp) => {
-    out += (sp.textContent || '').replace(/\u200B/g, '').replace(/ /g, ' ');
+    out += (sp.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ');
   });
   return out;
 }
