@@ -28,6 +28,8 @@ Coverage thresholds:
 
 These thresholds apply to the instrumented Node-side helper modules that protect data flow, origin policy, IP trust, request budgeting, and relay auth behavior.
 
+Browser modules are excluded from the coverage denominator (`c8 --exclude 'apps/web/**'`) in line with this policy; unit tests may still import and functionally assert them (e.g. `tests/unit/crypto.test.mjs` exercises the E2E encryption module under Node's WebCrypto).
+
 Frontend/browser coverage follows common practice through behavior-oriented E2E checks instead of forcing synthetic line coverage on static browser files:
 
 - simulator editor behavior
