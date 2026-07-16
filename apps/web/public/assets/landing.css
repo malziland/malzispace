@@ -172,7 +172,9 @@ a{color:#dbeafe;text-decoration:none}
   align-items:center;
   gap:6px;
   font-size:.78rem;
-  opacity:.55;
+  /* .55 failed WCAG AA contrast (axe color-contrast, serious) — .8 keeps the
+     muted resting look while clearing 4.5:1 on the dark hero background. */
+  opacity:.8;
   cursor:pointer;
   user-select:none;
   transition:opacity .15s ease;

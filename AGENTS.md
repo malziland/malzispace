@@ -22,6 +22,7 @@ python3 -m http.server 4173 --directory build/hosting --bind 127.0.0.1 &
 npm run test:e2e:simulator
 npm run test:e2e:mobile          # 92 desktop+mobile tests
 npm run test:e2e:i18n
+npm run test:e2e:a11y            # axe-core + keyboard paths (gates serious/critical)
 SIM=1 ENGINES=chromium npm run test:e2e:multiplayer:sim
 
 # These start their own local stack (firebase emulator + relay) — :4173 must be free

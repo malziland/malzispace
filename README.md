@@ -215,7 +215,7 @@ Deploy-Zeit-Overrides mit sicheren Defaults (siehe [`docs/FLAGS.md`](docs/FLAGS.
 ## Tests
 
 ```bash
-# Vollstaendige lokale Verifikation (10-Schritte-Pipeline)
+# Vollstaendige lokale Verifikation (11-Schritte-Pipeline)
 ./ops/verify_local.sh
 
 # Nur E2E (Desktop + Mobile, 92 Tests)
@@ -231,20 +231,21 @@ APP_CHECK_TOKEN="..." ./ops/verify_local.sh
 ./ops/verify_live.sh
 ```
 
-### 10-Schritte-Verifikationspipeline
+### 11-Schritte-Verifikationspipeline
 
 | Schritt | Beschreibung |
 |---------|--------------|
-| 1/10 | Repo-Hygiene (Dateinamen, Struktur, Secret-Muster) |
-| 2/10 | Linting (ESLint) |
-| 3/10 | Unit-Tests + Coverage Gate |
-| 4/10 | Build Hosting Bundle (Content-Hashed Filenames) |
-| 5/10 | Lokaler Testserver starten |
-| 6/10 | Frontend Simulator E2E |
-| 7/10 | Frontend Toolbar/Mobile E2E (Playwright, 92 Tests) |
-| 8/10 | I18N/Legal E2E |
-| 9/10 | Multiplayer Simulator E2E |
-| 10/10 | Lock-Flow E2E (Firebase Emulator + Relay) |
+| 1/11 | Repo-Hygiene (Dateinamen, Struktur, Secret-Muster) |
+| 2/11 | Linting (ESLint) |
+| 3/11 | Unit-Tests + Coverage Gate |
+| 4/11 | Build Hosting Bundle (Content-Hashed Filenames) |
+| 5/11 | Lokaler Testserver starten |
+| 6/11 | Frontend Simulator E2E |
+| 7/11 | Frontend Toolbar/Mobile E2E (Playwright, 92 Tests) |
+| 8/11 | I18N/Legal E2E |
+| 9/11 | Accessibility E2E (axe-core + Tastatur-Pfade) |
+| 10/11 | Multiplayer Simulator E2E |
+| 11/11 | Lock-Flow E2E (Firebase Emulator + Relay) |
 
 **E2E-Tests (92 Tests):** Playwright-basiert. Toolbar-Buttons, Textformatierung (Bold/Italic/Underline), Listen, Links, Zeilennummern, Word-Processor-Workflows, Chaos/Stability-Tests, Browser-Health-Checks. Alle Tests laufen in Desktop (1440x900) und Mobile (iPhone 12) Viewports.
 
@@ -257,7 +258,7 @@ GitHub Actions Workflow `.github/workflows/verify.yml`:
 - **Tests + Lint** bei jedem Push und Pull Request
 - **npm audit** auf `high` Severity-Level (Root, API, Relay)
 - **Playwright Chromium** fuer E2E-Tests
-- **Vollstaendige 10-Schritte-Pipeline** (`./ops/verify_local.sh`)
+- **Vollstaendige 11-Schritte-Pipeline** (`./ops/verify_local.sh`)
 - **Gehaertete Pipeline**: minimale Token-Rechte (`permissions: contents: read`), alle Actions auf Commit-SHAs gepinnt
 - **Dependabot** prueft monatlich auf unsichere Dependencies (npm + GitHub Actions)
 - Deploy erfolgt manuell per `firebase deploy`

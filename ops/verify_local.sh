@@ -12,36 +12,39 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[1/10] Repo hygiene"
+echo "[1/11] Repo hygiene"
 (cd "$ROOT_DIR" && npm run test:repo:hygiene)
 
-echo "[2/10] Lint"
+echo "[2/11] Lint"
 (cd "$ROOT_DIR" && npm run lint)
 
-echo "[3/10] Unit tests + coverage gate"
+echo "[3/11] Unit tests + coverage gate"
 (cd "$ROOT_DIR" && npm run test:coverage:check)
 
-echo "[4/10] Build hosting bundle"
+echo "[4/11] Build hosting bundle"
 (cd "$ROOT_DIR" && npm run build:hosting)
 
-echo "[5/10] Start local static server"
+echo "[5/11] Start local static server"
 python3 -m http.server 4173 --directory "$ROOT_DIR/build/hosting" >/tmp/malzispace-static-server.log 2>&1 &
 STATIC_SERVER_PID=$!
 sleep 1
 
-echo "[6/10] Frontend simulator E2E"
+echo "[6/11] Frontend simulator E2E"
 (cd "$ROOT_DIR" && BASE_URL=http://127.0.0.1:4173 npm run test:e2e:simulator)
 
-echo "[7/10] Frontend toolbar/mobile E2E"
+echo "[7/11] Frontend toolbar/mobile E2E"
 (cd "$ROOT_DIR" && npm run test:e2e:mobile)
 
-echo "[8/10] I18N/legal E2E"
+echo "[8/11] I18N/legal E2E"
 (cd "$ROOT_DIR" && npm run test:e2e:i18n)
 
-echo "[9/10] Multiplayer simulator E2E"
+echo "[9/11] Accessibility E2E"
+(cd "$ROOT_DIR" && npm run test:e2e:a11y)
+
+echo "[10/11] Multiplayer simulator E2E"
 (cd "$ROOT_DIR" && npm run test:e2e:multiplayer:sim)
 
-echo "[10/10] Lock-flow E2E (firebase emulator + relay)"
+echo "[11/11] Lock-flow E2E (firebase emulator + relay)"
 # The lock E2E reuses port 4173 via the firebase hosting emulator, so the
 # static server must be stopped before it runs. We restart-free shut it down
 # instead of relying on the EXIT trap (which only fires once the whole script

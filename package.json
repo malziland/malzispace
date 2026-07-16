@@ -22,6 +22,7 @@
     "test:e2e:simulator": "node tests/e2e/run_editor_simulator_e2e.mjs",
     "test:e2e:mobile": "BASE_URL=http://127.0.0.1:4173 node tests/e2e/run_space_toolbar_mobile_e2e.mjs",
     "test:e2e:i18n": "BASE_URL=http://127.0.0.1:4173 node tests/e2e/run_i18n_legal_checks.mjs",
+    "test:e2e:a11y": "BASE_URL=http://127.0.0.1:4173 node tests/e2e/run_a11y_checks.mjs",
     "test:e2e:multiplayer:sim": "BASE_URL=http://127.0.0.1:4173 SIM=1 ENGINES=chromium node tests/e2e/run_multiplayer_checks.mjs",
     "test:e2e:lock": "node tests/e2e/run_space_lock_e2e.mjs",
     "test:e2e:protect": "node tests/e2e/run_space_protect_e2e.mjs",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "axe-core": "^4.12.1",
     "c8": "^11.0.0",
     "eslint": "^10.4.0",
     "globals": "^17.6.0",
