@@ -2,12 +2,28 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
-## [Unreleased]
+## [1.4.1] - 2026-07-16
 
 Nachziehen des Repos auf den Bootstrap-/Audit-Standard (Konzept:
-`docs/project/familien-standard-konzept.md`), CI-Reparatur und
-Dependency-Updates. Kein Feature-Release; Deploy-relevant sind nur die
-Accessibility-Fixes und der entfernte tote Link auf `reset-cache.html`.
+`docs/project/familien-standard-konzept.md`), CI-Reparatur,
+Dependency-Updates, Accessibility-Haertung und KURZAUDIT-Remediation.
+
+### Changed (rechtlich)
+- **Firmenname aktualisiert** auf „malziland – learning | training |
+  consulting e.U." in Impressum, Datenschutz, AGB (DE+EN-Woerterbuecher)
+  und README.
+
+### Security
+- **App-Check-Bypass abgesichert (Audit SEC-02):** `MZ_DISABLE_APPCHECK=1`
+  wirkt nur noch im Functions-Emulator; ausserhalb wird das Flag ignoriert
+  (fail closed) und laut gemeldet.
+- **Kosten-/Abuse-Deckel (Audit OPS-01):** API-Function auf `maxInstances: 10`
+  begrenzt — Rate-Limits und Payload-Budgets gelten pro Instanz, unbegrenztes
+  Autoscaling multiplizierte beides und die Kosten.
+- Praezisierung im Security-Modell: Die **Sperre** ist serverseitig
+  durchgesetzt (Relay verwirft Non-Owner-Updates in gesperrten Raeumen);
+  nur die **Schutz-Granularitaet** ist designbedingt clientseitig
+  (Zero-Knowledge: der Relay sieht ausschliesslich Ciphertext).
 
 ### Fixed
 - **CI war seit dem 1.4.0-Push (28.05.) rot**, drei Ursachen, alle behoben:

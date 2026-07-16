@@ -98,7 +98,7 @@ async function checkImprint(page, results) {
   const body = (await page.locator('.legal-block').first().textContent()) || '';
 
   results.push({ name: 'imprint heading translated', pass: /^Imprint$/i.test(heading.trim()), detail: heading.trim() });
-  results.push({ name: 'imprint business description translated', pass: /digital knowledge design/i.test(body) && /Austria/i.test(body), detail: body.replace(/\s+/g, ' ').trim().slice(0, 180) });
+  results.push({ name: 'imprint business description translated', pass: /learning \| training \| consulting/i.test(body) && /Austria/i.test(body), detail: body.replace(/\s+/g, ' ').trim().slice(0, 180) });
 }
 
 async function main() {
