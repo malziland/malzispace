@@ -24,7 +24,7 @@ eslint 10.7.0, playwright 1.61.1 (Chromium), gitleaks 8.30.1.
 | SERVICE_API profile | Fail-closed write auth (`isWriteAuthorized`, central checks), 17 rate limiters, payload budget; inventory in README API table | Unit suites green (see above); docs/security/ABUSE_PROTECTION.md; README table completed 2026-07-16 (/lock, /append-only, /delete) |
 | MONOREPO profile | Pinned toolchain at root (.nvmrc, engines, lockfiles); CI always tests the full repo | verify.yml runs the complete pipeline on every push (no affected-only shortcut) |
 | Flags register | docs/FLAGS.md vs `apps/web/public/assets/config.js` | 2026-07-16 in sync (2 kill switches, 1 internal test flag, env switches documented) |
-| External controls (branch protection, push protection, 2FA, Dependabot app) | GitHub API, verified 2026-07-16 | Set/confirmed via `gh api`: branch protection on main (required checks `verify`+`secret-scan` for PRs, force-push and deletion blocked, direct maintainer pushes allowed), secret scanning + push protection enabled, vulnerability alerts + Dependabot security updates enabled. Open: 2FA status not readable via token — enabling is a maintainer-only account action |
+| External controls (branch protection, push protection, 2FA, Dependabot app) | GitHub API, verified 2026-07-16 | Set/confirmed via `gh api`: branch protection on main (required checks `verify`+`secret-scan` for PRs, force-push and deletion blocked, direct maintainer pushes allowed), secret scanning + push protection enabled, vulnerability alerts + Dependabot security updates enabled. 2FA: verified enabled 2026-07-16 via maintainer's account settings (authenticator app + 2 passkeys; GitHub-mandated for the account) |
 
 Known open items are tracked inline above (optional VoiceOver pass, old PHP
-webspace decommissioning confirmation, 2FA) — each maintainer-only.
+webspace decommissioning confirmation) — each maintainer-only.
