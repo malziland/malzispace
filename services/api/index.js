@@ -301,9 +301,18 @@ router.use((req, res, next) => {
 // In local/emulator runs the production App Check chain (PoW challenge plus
 // `admin.appCheck().createToken`) cannot work because the service has no
 // service-account credentials for the real project. The bypass is opt-in via
-// env var, must never be set in production deployments, and is intentionally
-// boolean (no per-request override) to keep the surface tiny.
-const APP_CHECK_BYPASS = String(process.env.MZ_DISABLE_APPCHECK || '') === '1';
+// env var and intentionally boolean (no per-request override) to keep the
+// surface tiny. It is honored ONLY inside the Functions emulator: a stray
+// MZ_DISABLE_APPCHECK=1 on a production deploy is ignored (fail closed) and
+// loudly reported instead of silently disabling App Check (audit SEC-02).
+const APP_CHECK_BYPASS_REQUESTED = String(process.env.MZ_DISABLE_APPCHECK || '') === '1';
+const IN_FUNCTIONS_EMULATOR = !!process.env.FUNCTIONS_EMULATOR;
+const APP_CHECK_BYPASS = APP_CHECK_BYPASS_REQUESTED && IN_FUNCTIONS_EMULATOR;
+if (APP_CHECK_BYPASS_REQUESTED && !IN_FUNCTIONS_EMULATOR) {
+  console.error('MZ_DISABLE_APPCHECK=1 ignored outside the Functions emulator — App Check stays enforced (fail closed).');
+} else if (APP_CHECK_BYPASS) {
+  console.warn('App Check bypass ACTIVE (Functions emulator only).');
+}
 
 async function verifyAppCheck(req, res, next) {
   if (APP_CHECK_BYPASS) return next();
@@ -1011,7 +1020,10 @@ app.use((err, req, res, next) => {
 exports.api = onRequest({
   region: 'europe-west3',
   cors: false,
-  invoker: 'public'
+  invoker: 'public',
+  // Cost/abuse ceiling: rate limits and payload budgets are per instance, so
+  // unbounded autoscaling would multiply them and the bill (audit OPS-01).
+  maxInstances: 10
 }, app);
 
 const CLEANUP_BATCH = 200;

@@ -39,12 +39,15 @@ protection), `docs/security/SECURITY_RUNBOOK.md` (incident response),
 3. **Functions/relay ↔ Firestore/RTDB** — security rules deny **all** client
    access; only backend identities read/write. Deletion order is
    RTDB-before-Firestore so no orphaned realtime data survives.
-4. **Client-side enforcement boundary (known limitation)** — protect/append-
-   only mode is enforced in the client (protect-guard + CRDT owner-invariant
-   in `network/collaboration.js`). The relay does **not** validate Yjs updates
-   against protect rules server-side; a manipulated client can violate
-   protect mode until honest clients reconcile. Accepted risk, tracked as an
-   open hardening item (owner: maintainer).
+4. **Enforcement boundaries (by design)** — the **lock** (read-only) is
+   enforced server-side: the relay drops non-owner Yjs updates in locked
+   rooms and `/api/*` write paths require `key_proof`/`owner_key_proof`.
+   **Protect/append-only granularity** (which spans are owner text) is
+   enforced client-side only (protect-guard + CRDT owner-invariant in
+   `network/collaboration.js`): the relay sees only ciphertext and cannot
+   inspect content — an inherent consequence of the zero-knowledge design,
+   not an omission. A manipulated client can violate protect mode until
+   honest clients reconcile. Accepted residual risk (owner: maintainer).
 
 ## Main abuse cases and countermeasures
 
