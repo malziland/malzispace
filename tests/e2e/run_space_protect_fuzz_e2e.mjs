@@ -68,7 +68,7 @@ const isAppendOnlyActive = (page) => page.evaluate(() => document.body.classList
 const getOwnerText = (page) => page.evaluate(() => {
   let s = '';
   document.querySelectorAll('#editor .mz-owner-text').forEach((sp) => {
-    s += (sp.textContent || '').replace(/​/g, '').replace(/ /g, ' ');
+    s += (sp.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ');
   });
   return s;
 });

@@ -24,12 +24,6 @@ const OWNER_SELECTOR = '.' + OWNER_TEXT_CLASS;
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-function isOwnerNode(node) {
-  if (!node) return false;
-  const el = node.nodeType === 1 ? node : node.parentElement;
-  return !!(el && el.closest && el.closest(OWNER_SELECTOR));
-}
-
 /** True if the given Range overlaps any owner-marked content. */
 function rangeTouchesOwner(range) {
   if (!range || !ctx.editor) return false;
@@ -185,33 +179,9 @@ function isInsideOwnerSpan(node) {
 
 function blockIsEmpty(block) {
   if (!block) return false;
-  const text = (block.textContent || '').replace(/​/g, '').replace(/ /g, ' ').trim();
+  const text = (block.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ').trim();
   if (text) return false;
   return !block.querySelector('img,hr,video,audio,canvas,svg,object,embed');
-}
-
-/**
- * Replace the browser's default paragraph-creation with a clean new block.
- * Used when the caret sits inside an owner span and Enter would otherwise
- * be allowed — the browser tends to clone the span into the new block,
- * trapping the participant inside an empty owner span where every further
- * input is treated as an owner-content edit and blocked.
- */
-function insertCleanParagraphAfterCaret(range) {
-  const block = getContainingBlock(range.startContainer);
-  if (!block || !block.parentNode) return false;
-  const tag = (block.tagName || 'DIV').toLowerCase();
-  const fresh = document.createElement(tag);
-  fresh.appendChild(document.createElement('br'));
-  block.parentNode.insertBefore(fresh, block.nextSibling);
-  const sel = window.getSelection();
-  const newRange = document.createRange();
-  newRange.setStart(fresh, 0);
-  newRange.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
-  ctx.editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertParagraph' }));
-  return true;
 }
 
 /**
@@ -302,102 +272,6 @@ function laterBlockHasOwner(range) {
 }
 
 /**
- * Detect whether the caret sits exactly at a boundary of an owner span
- * (right before its first leaf, or right after its last leaf). Inside the
- * span text itself returns null — that's the "split owner content" case
- * and stays blocked. Returns `{ span, position: 'before' | 'after' }` or
- * null.
- */
-function findOwnerBoundary(range) {
-  if (!range || !range.collapsed) return null;
-  const node = range.startContainer;
-  const offset = range.startOffset;
-  const el = node.nodeType === 3 ? node.parentElement : node;
-  const span = el && el.closest ? el.closest(OWNER_SELECTOR) : null;
-  if (!span) return null;
-  if (node.nodeType === 3) {
-    if (offset === 0) {
-      let n = node;
-      while (n && n !== span) {
-        if (n.previousSibling) return null;
-        n = n.parentNode;
-      }
-      return { span, position: 'before' };
-    }
-    if (offset === (node.textContent || '').length) {
-      let n = node;
-      while (n && n !== span) {
-        if (n.nextSibling) return null;
-        n = n.parentNode;
-      }
-      return { span, position: 'after' };
-    }
-    return null;
-  }
-  // Element container
-  if (node === span) {
-    if (offset === 0) return { span, position: 'before' };
-    if (offset === node.childNodes.length) return { span, position: 'after' };
-    return null;
-  }
-  if (offset === 0) {
-    let n = node;
-    while (n && n !== span) {
-      if (n.previousSibling) return null;
-      n = n.parentNode;
-    }
-    return { span, position: 'before' };
-  }
-  if (offset === node.childNodes.length) {
-    let n = node;
-    while (n && n !== span) {
-      if (n.nextSibling) return null;
-      n = n.parentNode;
-    }
-    return { span, position: 'after' };
-  }
-  return null;
-}
-
-/**
- * Insert participant text right outside an owner span. Used when the caret
- * sits at the span's start or end boundary — the typed text becomes a
- * sibling text node next to the span, never modifying its contents.
- */
-function insertTextAtOwnerBoundary(boundary, text) {
-  const span = boundary.span;
-  const parent = span.parentNode;
-  if (!parent) return false;
-  const ref = boundary.position === 'after' ? span.nextSibling : span;
-  // Reuse an adjacent participant text node when possible so we don't grow
-  // a chain of single-character siblings on each keystroke.
-  let target = null;
-  if (boundary.position === 'after') {
-    const candidate = span.nextSibling;
-    if (candidate && candidate.nodeType === 3) target = candidate;
-  } else {
-    const candidate = span.previousSibling;
-    if (candidate && candidate.nodeType === 3) target = candidate;
-  }
-  const sel = window.getSelection();
-  const r = document.createRange();
-  if (target) {
-    const at = boundary.position === 'after' ? 0 : (target.textContent || '').length;
-    target.insertData(at, text);
-    r.setStart(target, at + text.length);
-  } else {
-    const fresh = document.createTextNode(text);
-    parent.insertBefore(fresh, ref);
-    r.setStart(fresh, text.length);
-  }
-  r.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(r);
-  ctx.editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
-  return true;
-}
-
-/**
  * True if a participant text/content insertion at `range` must be blocked
  * because it would modify, split, or wedge owner-marked content. Shared by
  * the `beforeinput` guard and the explicit paste handler (which bypasses
@@ -431,7 +305,7 @@ function ownerTextSignature(root) {
   let out = '';
   // Normalize zero-width / nbsp the same way input-normalization does, so a
   // structural-only normalization pass is not mistaken for a content change.
-  for (const sp of spans) out += (sp.textContent || '').replace(/​/g, '').replace(/ /g, ' ');
+  for (const sp of spans) out += (sp.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ');
   return out;
 }
 
@@ -477,7 +351,7 @@ function ownerTextFromStored(storedHtml) {
   tpl.innerHTML = typeof storedHtml === 'string' ? storedHtml : '';
   let out = '';
   tpl.content.querySelectorAll(OWNER_SELECTOR).forEach((sp) => {
-    out += (sp.textContent || '').replace(/​/g, '').replace(/ /g, ' ');
+    out += (sp.textContent || '').replace(/\u200B/g, '').replace(/ /g, ' ');
   });
   return out;
 }
@@ -748,7 +622,7 @@ function blockIfProtected(e) {
     // doesn't change which content is protected.
     const enterContainingBlock = getContainingBlock(range.startContainer);
     const enterInEmptyBlock = enterContainingBlock
-      && !(enterContainingBlock.textContent || '').replace(/​/g, '').replace(/ /g, ' ').trim()
+      && !(enterContainingBlock.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ').trim()
       && !enterContainingBlock.querySelector(OWNER_SELECTOR);
     if (!enterInEmptyBlock && (nextContentIsOwner(range) || ownerInSameBlockAfterCursor(range))) {
       e.preventDefault();
