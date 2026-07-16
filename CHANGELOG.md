@@ -2,6 +2,51 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [Unreleased]
+
+Nachziehen des Repos auf den Bootstrap-/Audit-Standard (Konzept:
+`docs/project/familien-standard-konzept.md`), CI-Reparatur und
+Dependency-Updates. Kein Feature-Release; Deploy-relevant sind nur die
+Accessibility-Fixes und der entfernte tote Link auf `reset-cache.html`.
+
+### Fixed
+- **CI war seit dem 1.4.0-Push (28.05.) rot**, drei Ursachen, alle behoben:
+  (a) Repo-Hygiene-Check kannte keine geprueften Ausnahmen fuer die bewusst
+  self-contained gebaute `reset-cache.html` und die CSSOM-Styles von
+  Zeilennummern/Version-Banner/Diag-Overlay — jetzt dokumentierte Allowlist;
+  (b) eslint 10.4 fand rohe U+200B/U+00A0 in Regex-Literalen (jetzt
+  `\uXXXX`-Escapes, verhaltensgleich) und vier tote rc2-Hilfsfunktionen in
+  `protect-guard.js` (entfernt); (c) Lock-E2E trieb noch das seit 1.3.1
+  versteckte `#lockToggle` — auf den Mode-Switch portiert.
+- **Toter Link entfernt:** `javascript:history.back()` auf `reset-cache.html`
+  war durch die Site-CSP zur Laufzeit blockiert (Klick ohne Wirkung).
+- **Accessibility (axe, serious):** Verbindungs-Status-Punkt ohne gueltige
+  ARIA-Semantik (`role="status"` ergaenzt), Info-Icon der Sperr-Checkbox
+  (`role="img"`), Kontrast des Sperr-Labels auf der Startseite (AA erfuellt).
+
+### Added
+- **Accessibility-E2E** `npm run test:e2e:a11y` (axe-core + Tastatur-Pfade)
+  als Schritt 9/11 der Verifikationspipeline; manuelle Checkliste in
+  `docs/frontend/A11Y_SMOKETEST.md`.
+- **Secret-Scanning in CI** (gitleaks, volle Historie, checksummen-verifiziert)
+  mit dokumentierten Ausnahmen in `.gitleaks.toml`.
+- **Bootstrap-Artefakte:** `AGENTS.md` (+`CLAUDE.md`), `docs/adr/ADR-0001`,
+  `docs/VERIFICATION.md`, `docs/SECURITY-MODEL.md`, `docs/RUNBOOK.md` (inkl.
+  durchgefuehrter Rollback-Probe auf v1.4.0), `docs/FLAGS.md`.
+- **`npm run setup`** installiert Root + beide Service-Lockfiles + Playwright.
+
+### Changed
+- **CI gehaertet:** minimale Token-Rechte, alle Actions auf Commit-SHAs gepinnt.
+- **Dependencies:** collab-relay auf firebase-admin **14.1** (modulare API;
+  Legacy-Namespace entfernt), API bleibt wegen firebase-functions-Peer-Range
+  auf admin **13.10**, nutzt aber ebenfalls die modulare API; transitive
+  High/Critical-Advisories (grpc-js, form-data, protobufjs, websocket-driver)
+  per `npm audit fix` behoben — alle drei Audit-Gates gruen. Tooling: eslint
+  10.7, globals 17.7, playwright 1.61, yjs 13.6.31, ws 8.21.
+- README: API-Tabelle um `/api/lock`, `/api/append-only`, `/api/delete`
+  ergaenzt (fehlten), Quickstart auf `npm run setup`, Pipeline-Doku 9→11
+  Schritte korrigiert.
+
 ## [1.4.0] - 2026-05-28
 
 Finales Release der Schutz-Haertung (aus 1.3.7 + rc1–rc3 zusammengefasst):
