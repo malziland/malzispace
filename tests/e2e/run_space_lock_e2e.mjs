@@ -9,6 +9,10 @@
  *
  * Assertions cover initial read-only state, live unlock propagation, and
  * re-lock. The test is the canonical end-to-end smoke for OWNER-01..OWNER-08.
+ *
+ * Since v1.3.1 owners control lock/protect through the segmented mode switch
+ * (#modeSwitch, data-mode open|protect|locked); #lockToggle survives only as
+ * the passive read-only indicator non-owners see on a locked space.
  */
 import { startDevStack } from '../support/dev_stack.mjs';
 import { launchChromiumBrowser } from '../support/browser.mjs';
@@ -86,11 +90,28 @@ async function getLockButtonState(page) {
     if (!btn) return { exists: false };
     return {
       exists: true,
-      hidden: btn.hasAttribute('hidden'),
+      hidden: btn.hasAttribute('hidden') || getComputedStyle(btn).display === 'none',
       state: btn.getAttribute('data-state') || '',
       disabled: !!btn.disabled
     };
   });
+}
+
+async function getModeSwitchState(page) {
+  return page.evaluate(() => {
+    const m = document.getElementById('modeSwitch');
+    if (!m) return { exists: false };
+    const active = m.querySelector('.mode-segment[aria-checked="true"]');
+    return {
+      exists: true,
+      hidden: m.hidden || getComputedStyle(m).display === 'none',
+      activeMode: active ? active.getAttribute('data-mode') : null
+    };
+  });
+}
+
+function setOwnerMode(page, mode) {
+  return page.click(`#modeSwitch .mode-segment[data-mode="${mode}"]`);
 }
 
 async function waitForLockState(page, expectedState, { timeoutMs = 8000 } = {}) {
@@ -170,10 +191,10 @@ async function main() {
     pass('PASS owner_editor_editable - owner can edit a freshly locked space');
 
     await waitFor(async () => {
-      const s = await getLockButtonState(ownerPage);
-      return s.exists && !s.hidden && s.state === 'locked';
-    }, { timeoutMs: 8000, label: 'owner lock button visible & state=locked' });
-    pass('PASS owner_sees_lock_button - state=locked');
+      const s = await getModeSwitchState(ownerPage);
+      return s.exists && !s.hidden && s.activeMode === 'locked';
+    }, { timeoutMs: 8000, label: 'owner mode switch visible & active=locked' });
+    pass('PASS owner_sees_mode_switch - active segment=locked');
 
     await waitFor(async () => {
       return ownerPage.evaluate(() => {
@@ -232,13 +253,17 @@ async function main() {
       pass('PASS reader_no_owner_button - Owner-Link copy button hidden for readers');
     }
 
-    // -- Owner unlocks; reader UI must update live --------------------------
-    await ownerPage.click('#lockToggle');
+    // -- Owner unlocks (mode "open"); reader UI must update live ------------
+    await setOwnerMode(ownerPage, 'open');
     await waitForLockState(readerPage, 'unlocked', { timeoutMs: 8000 });
     pass('PASS reader_unlocks_live - editor became editable after owner unlock');
 
-    // -- Owner re-locks; reader becomes read-only again ---------------------
-    await ownerPage.click('#lockToggle');
+    // -- Owner re-locks (mode "locked"); reader becomes read-only again -----
+    await waitFor(async () => {
+      const s = await getModeSwitchState(ownerPage);
+      return s.activeMode === 'open';
+    }, { timeoutMs: 8000, label: 'owner switch settled on open' });
+    await setOwnerMode(ownerPage, 'locked');
     await waitForLockState(readerPage, 'locked', { timeoutMs: 8000 });
     pass('PASS reader_relocks_live - editor disabled again after owner re-lock');
 
@@ -255,9 +280,9 @@ async function main() {
     // arrive, then check the button still reads 'locked'.
     await ownerPage2.waitForTimeout(2500);
     await waitFor(async () => {
-      const s = await getLockButtonState(ownerPage2);
-      return s.exists && !s.hidden && s.state === 'locked' && !s.disabled;
-    }, { timeoutMs: 8000, label: 'fresh-tab owner sees enabled lock with state=locked' });
+      const s = await getModeSwitchState(ownerPage2);
+      return s.exists && !s.hidden && s.activeMode === 'locked';
+    }, { timeoutMs: 8000, label: 'fresh-tab owner sees mode switch with active=locked' });
     pass('PASS fresh_owner_tab - pasting owner URL in a new tab keeps full owner powers (lock stays locked)');
 
     // -- Owner tab navigates to reader URL → must drop owner state ---------
@@ -293,6 +318,7 @@ async function main() {
     const afterPasteState = await ownerPage3.evaluate(() => {
       const o = document.getElementById('copyOwnerLink');
       const l = document.getElementById('lockToggle');
+      const m = document.getElementById('modeSwitch');
       const editor = document.getElementById('editor');
       let storedKeys = '';
       try { storedKeys = sessionStorage.getItem('mz_keys_' + String(window.SPACE_ID || '')) || ''; } catch (e) {}
@@ -305,11 +331,13 @@ async function main() {
         lockHidden: l ? l.hasAttribute('hidden') : null,
         lockComputed: l ? getComputedStyle(l).display : null,
         lockState: l ? l.getAttribute('data-state') : null,
+        modeSwitchComputed: m ? getComputedStyle(m).display : null,
         editorEditable: editor ? editor.getAttribute('contenteditable') === 'true' : null
       };
     });
     console.log('  diagnostic state:', JSON.stringify(afterPasteState));
     if (afterPasteState.ownerComputed && afterPasteState.ownerComputed !== 'none') throw new Error('owner tab → reader URL: copyOwnerLink still visible');
+    if (afterPasteState.modeSwitchComputed && afterPasteState.modeSwitchComputed !== 'none') throw new Error('owner tab → reader URL: mode switch still visible (owner state retained)');
     if (afterPasteState.editorEditable) throw new Error('owner tab → reader URL: editor still editable (must be read-only)');
     pass(`PASS owner_tab_to_reader - reader UI applied after reader-URL navigation`);
 
@@ -347,30 +375,33 @@ async function main() {
 
     const ownerState = await pOwner.evaluate(() => {
       const o = document.getElementById('copyOwnerLink');
-      const l = document.getElementById('lockToggle');
+      const m = document.getElementById('modeSwitch');
+      const active = m ? m.querySelector('.mode-segment[aria-checked="true"]') : null;
       const editor = document.getElementById('editor');
       return {
         ownerVisible: o ? getComputedStyle(o).display !== 'none' : null,
-        lockState: l ? l.getAttribute('data-state') : null,
-        lockDisabled: l ? l.disabled : null,
+        modeSwitchVisible: m ? getComputedStyle(m).display !== 'none' : null,
+        activeMode: active ? active.getAttribute('data-mode') : null,
         editorEditable: editor ? editor.getAttribute('contenteditable') === 'true' : null
       };
     });
     const readerState = await pReader.evaluate(() => {
       const o = document.getElementById('copyOwnerLink');
       const l = document.getElementById('lockToggle');
+      const m = document.getElementById('modeSwitch');
       const editor = document.getElementById('editor');
       return {
         ownerVisible: o ? getComputedStyle(o).display !== 'none' : null,
+        modeSwitchVisible: m ? getComputedStyle(m).display !== 'none' : null,
         lockState: l ? l.getAttribute('data-state') : null,
         lockDisabled: l ? l.disabled : null,
         editorEditable: editor ? editor.getAttribute('contenteditable') === 'true' : null
       };
     });
-    if (!ownerState.ownerVisible || ownerState.lockState !== 'locked' || ownerState.lockDisabled || !ownerState.editorEditable) {
+    if (!ownerState.ownerVisible || !ownerState.modeSwitchVisible || ownerState.activeMode !== 'locked' || !ownerState.editorEditable) {
       throw new Error('parallel: owner tab regressed: ' + JSON.stringify(ownerState));
     }
-    if (readerState.ownerVisible || readerState.lockState !== 'readonly' || !readerState.lockDisabled || readerState.editorEditable) {
+    if (readerState.ownerVisible || readerState.modeSwitchVisible || readerState.lockState !== 'readonly' || !readerState.lockDisabled || readerState.editorEditable) {
       throw new Error('parallel: reader tab regressed: ' + JSON.stringify(readerState));
     }
     pass('PASS parallel_owner_reader - both tabs functional in the same browser context');
