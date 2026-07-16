@@ -17,7 +17,10 @@ const FUNCTIONS_PORT = 5001;
 const FIRESTORE_PORT = 8080;
 const DATABASE_PORT = 9000;
 const RELAY_PORT = 9100;
-const PROJECT_ID = 'malzispace';
+// demo- prefix = fully offline emulator project (Firebase convention): no
+// login, no metadata fetch, no accidental contact with the real project.
+// Required in CI, where no firebase login exists.
+const PROJECT_ID = 'demo-malzispace';
 const ALLOWED_ORIGIN = `http://127.0.0.1:${HOSTING_PORT}`;
 
 function isPortFree(port) {
@@ -108,13 +111,21 @@ export async function startDevStack({ silent = true } = {}) {
       }
     );
     processes.push(emulator);
+    // Even in silent mode, keep the tail of the emulator output so a failed
+    // boot can print WHY (a swallowed stderr cost a full CI round-trip once).
+    const emulatorTail = [];
+    const keepTail = (chunk) => {
+      emulatorTail.push(String(chunk));
+      while (emulatorTail.length > 40) emulatorTail.shift();
+    };
     if (silent) {
-      emulator.stdout?.on('data', () => {});
-      emulator.stderr?.on('data', () => {});
+      emulator.stdout?.on('data', keepTail);
+      emulator.stderr?.on('data', keepTail);
     }
     emulator.on('exit', (code, signal) => {
       if (code && code !== 0 && code !== 130) {
         console.error(`firebase emulators exited with code=${code} signal=${signal}`);
+        if (emulatorTail.length) console.error(emulatorTail.join('').slice(-4000));
       }
     });
 
@@ -122,6 +133,7 @@ export async function startDevStack({ silent = true } = {}) {
     const databaseOk = await tcpReady(DATABASE_PORT);
     const hostingOk = await httpReady(`http://127.0.0.1:${HOSTING_PORT}/`);
     if (!firestoreOk || !databaseOk || !hostingOk) {
+      if (emulatorTail.length) console.error('--- emulator output tail ---\n' + emulatorTail.join('').slice(-4000));
       throw new Error(`Firebase emulator not ready (firestore=${firestoreOk}, db=${databaseOk}, host=${hostingOk})`);
     }
     // Functions emulator: port opens long before the function is loaded. The
