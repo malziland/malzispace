@@ -17,7 +17,7 @@ eslint 10.7.0, playwright 1.61.1 (Chromium), gitleaks 8.30.1.
 | Accessibility (UI profile) | `npm run test:e2e:a11y` — axe serious/critical gate + keyboard paths | 2026-07-16 green (0 serious/critical); full smoketest checklist executed scripted, 9/9 green (see A11Y_SMOKETEST.md runs table); only the optional VoiceOver pass remains genuinely manual |
 | Lock-flow E2E | `npm run test:e2e:lock` (step 11/11) | 2026-07-16 green in CI (run 29520644377) AND locally (11 assertions) after the mode-switch port |
 | Protect E2E suites | `test:e2e:protect`, `test:e2e:protect:fuzz` | 2026-07-16 green locally: 12/12 protect assertions; fuzz "All protection invariants held" (Chromium + WebKit, playwright 1.61.1) |
-| Secret scan | gitleaks 8.30.1, full history, `.gitleaks.toml` exceptions | 2026-07-16: 101 commits scanned, no leaks after triage; CI job repeats per push. config.php key (f2e53136) triaged: symmetric at-rest key of the retired pre-Firebase PHP prototype, zero references in HEAD (`git grep`), prototype data expired by design — residual risk only if the old PHP webspace still exists (maintainer to confirm decommissioning) |
+| Secret scan | gitleaks 8.30.1, full history, `.gitleaks.toml` exceptions | 2026-07-16: 101 commits scanned, no leaks after triage; CI job repeats per push. config.php key (f2e53136) triaged and CLOSED 2026-07-16: symmetric at-rest key of the retired pre-Firebase PHP prototype, zero references in HEAD (`git grep`), prototype data expired by design; maintainer confirms nothing pre-Firebase is in use or deployed — the key protects nothing |
 | Dependency audit | `npm audit --omit=dev --audit-level=high` in root, services/api, services/collab-relay | 2026-07-16 all three exit 0 (remaining moderate: uuid chain under firebase-admin 13, api only) |
 | Rollback capability | Probe on tag v1.4.0 in temp worktree: setup, test, build | 2026-07-16 performed: tests 49/49, build OK; lint red there (pre-existing, fixed on main) — docs/RUNBOOK.md |
 | CI pipeline | `.github/workflows/verify.yml` (hardened, 3 jobs) | 2026-07-16 green: run 29520644377 (verify all 11 steps incl. lock E2E, secret-scan; first fully green run since 2026-05-28). Step 11 needed firebase-tools\@15.24.0 + JDK 21 provisioning and the offline demo- project id |
@@ -26,5 +26,5 @@ eslint 10.7.0, playwright 1.61.1 (Chromium), gitleaks 8.30.1.
 | Flags register | docs/FLAGS.md vs `apps/web/public/assets/config.js` | 2026-07-16 in sync (2 kill switches, 1 internal test flag, env switches documented) |
 | External controls (branch protection, push protection, 2FA, Dependabot app) | GitHub API, verified 2026-07-16 | Set/confirmed via `gh api`: branch protection on main (required checks `verify`+`secret-scan` for PRs, force-push and deletion blocked, direct maintainer pushes allowed), secret scanning + push protection enabled, vulnerability alerts + Dependabot security updates enabled. 2FA: verified enabled 2026-07-16 via maintainer's account settings (authenticator app + 2 passkeys; GitHub-mandated for the account) |
 
-Known open items are tracked inline above (optional VoiceOver pass, old PHP
-webspace decommissioning confirmation) — each maintainer-only.
+Remaining open item: only the optional VoiceOver listening pass (manual,
+maintainer). Everything else in this matrix is verified and closed.
