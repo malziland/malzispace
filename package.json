@@ -8,6 +8,7 @@
   ],
   "license": "MIT",
   "scripts": {
+    "setup": "npm ci && (cd services/api && npm ci --no-workspaces) && (cd services/collab-relay && npm ci --no-workspaces) && npx playwright install chromium",
     "build:hosting": "node tools/bin/build_hosting.mjs",
     "verify": "./ops/verify_local.sh",
     "verify:live": "./ops/verify_live.sh",

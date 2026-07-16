@@ -153,6 +153,9 @@ Alle Endpunkte laufen ueber Firebase Cloud Functions v2 (`/api/*`).
 | `/api/yjs/push` | POST | Yjs CRDT Update pushen (verschluesselt + `key_proof`) |
 | `/api/yjs/pull` | GET | Yjs CRDT Snapshots + Updates laden |
 | `/api/presence` | POST | Praesenz-Signal senden |
+| `/api/lock` | POST | Space sperren/entsperren (nur Owner, `owner_key_proof`) |
+| `/api/append-only` | POST | Inhaltsschutz aktivieren/deaktivieren (nur Owner) |
+| `/api/delete` | POST | Space sofort loeschen (GDPR-Loeschpfad, `key_proof`) |
 
 ### Request (Create)
 
@@ -195,10 +198,8 @@ cd malzispace
 npm i -g firebase-tools
 firebase login
 
-# 3. Dependencies installieren
-npm install                                # Root + Tests
-cd services/api && npm install && cd ../..  # API Functions
-cd services/collab-relay && npm install && cd ../..  # Relay
+# 3. Dependencies installieren (Root + beide Services + Playwright Chromium)
+npm run setup
 
 # 4. Lokal verifizieren
 ./ops/verify_local.sh
@@ -207,10 +208,14 @@ cd services/collab-relay && npm install && cd ../..  # Relay
 firebase deploy --only functions,hosting
 ```
 
+Keine `.env` noetig: Lokale Entwicklung und Tests laufen ohne
+Umgebungsvariablen; die `MZ_*`-Variablen der Services sind reine
+Deploy-Zeit-Overrides mit sicheren Defaults (siehe [`docs/FLAGS.md`](docs/FLAGS.md)).
+
 ## Tests
 
 ```bash
-# Vollstaendige lokale Verifikation (9-Schritte-Pipeline)
+# Vollstaendige lokale Verifikation (10-Schritte-Pipeline)
 ./ops/verify_local.sh
 
 # Nur E2E (Desktop + Mobile, 92 Tests)
@@ -226,19 +231,20 @@ APP_CHECK_TOKEN="..." ./ops/verify_local.sh
 ./ops/verify_live.sh
 ```
 
-### 9-Schritte-Verifikationspipeline
+### 10-Schritte-Verifikationspipeline
 
 | Schritt | Beschreibung |
 |---------|--------------|
-| 1/9 | Repo-Hygiene (Dateinamen, Struktur) |
-| 2/9 | Linting (ESLint) |
-| 3/9 | Unit-Tests + Coverage Gate |
-| 4/9 | Build Hosting Bundle (Content-Hashed Filenames) |
-| 5/9 | Lokaler Testserver starten |
-| 6/9 | Frontend Simulator E2E |
-| 7/9 | Frontend Toolbar/Mobile E2E (Playwright, 92 Tests) |
-| 8/9 | I18N/Legal E2E |
-| 9/9 | Multiplayer Simulator E2E |
+| 1/10 | Repo-Hygiene (Dateinamen, Struktur, Secret-Muster) |
+| 2/10 | Linting (ESLint) |
+| 3/10 | Unit-Tests + Coverage Gate |
+| 4/10 | Build Hosting Bundle (Content-Hashed Filenames) |
+| 5/10 | Lokaler Testserver starten |
+| 6/10 | Frontend Simulator E2E |
+| 7/10 | Frontend Toolbar/Mobile E2E (Playwright, 92 Tests) |
+| 8/10 | I18N/Legal E2E |
+| 9/10 | Multiplayer Simulator E2E |
+| 10/10 | Lock-Flow E2E (Firebase Emulator + Relay) |
 
 **E2E-Tests (92 Tests):** Playwright-basiert. Toolbar-Buttons, Textformatierung (Bold/Italic/Underline), Listen, Links, Zeilennummern, Word-Processor-Workflows, Chaos/Stability-Tests, Browser-Health-Checks. Alle Tests laufen in Desktop (1440x900) und Mobile (iPhone 12) Viewports.
 
@@ -247,10 +253,12 @@ APP_CHECK_TOKEN="..." ./ops/verify_local.sh
 GitHub Actions Workflow `.github/workflows/verify.yml`:
 
 - **Dependency Review** bei Pull Requests (`actions/dependency-review-action`)
+- **Secret-Scan** (gitleaks, volle Historie, Checksummen-verifiziertes Binary; Ausnahmen dokumentiert in `.gitleaks.toml`)
 - **Tests + Lint** bei jedem Push und Pull Request
 - **npm audit** auf `high` Severity-Level (Root, API, Relay)
 - **Playwright Chromium** fuer E2E-Tests
-- **Vollstaendige 9-Schritte-Pipeline** (`./ops/verify_local.sh`)
+- **Vollstaendige 10-Schritte-Pipeline** (`./ops/verify_local.sh`)
+- **Gehaertete Pipeline**: minimale Token-Rechte (`permissions: contents: read`), alle Actions auf Commit-SHAs gepinnt
 - **Dependabot** prueft monatlich auf unsichere Dependencies (npm + GitHub Actions)
 - Deploy erfolgt manuell per `firebase deploy`
 

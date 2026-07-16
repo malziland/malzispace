@@ -7,10 +7,7 @@ Architecture map: `docs/architecture/REPO_LAYOUT.md`. Quality gates: `docs/ops/Q
 
 ```bash
 # Setup (fresh clone, Node 24 — see .nvmrc)
-npm ci                                                # root + workspaces (tests)
-(cd services/api && npm ci --no-workspaces)           # separate lockfile
-(cd services/collab-relay && npm ci --no-workspaces)  # separate lockfile
-npx playwright install chromium                       # for E2E suites
+npm run setup    # npm ci for root + both service lockfiles + Playwright Chromium
 
 # Quality gates
 npm run lint                     # ESLint, whole repo
