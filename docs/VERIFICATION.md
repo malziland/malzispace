@@ -26,5 +26,6 @@ eslint 10.7.0, playwright 1.61.1 (Chromium), gitleaks 8.30.1.
 | Flags register | docs/FLAGS.md vs `apps/web/public/assets/config.js` | 2026-07-16 in sync (2 kill switches, 1 internal test flag, env switches documented) |
 | External controls (branch protection, push protection, 2FA, Dependabot app) | GitHub API, verified 2026-07-16 | Set/confirmed via `gh api`: branch protection on main (required checks `verify`+`secret-scan` for PRs, force-push and deletion blocked, direct maintainer pushes allowed), secret scanning + push protection enabled, vulnerability alerts + Dependabot security updates enabled. 2FA: verified enabled 2026-07-16 via maintainer's account settings (authenticator app + 2 passkeys; GitHub-mandated for the account) |
 
-Remaining open item: only the optional VoiceOver listening pass (manual,
-maintainer). Everything else in this matrix is verified and closed.
+No open items remain: the optional VoiceOver pass was deliberately skipped
+(maintainer decision 2026-07-16, rationale in docs/frontend/A11Y_SMOKETEST.md).
+Everything in this matrix is verified and closed.
