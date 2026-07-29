@@ -2,6 +2,68 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.4.2] - 2026-07-29
+
+Aufloesung des Dependabot-Rueckstaus (15 offene PRs, keiner mergebar),
+Beseitigung aller verbleibenden Warnungen und Automatisierung kuenftiger
+Dependency-Updates.
+
+### Fixed
+- **Dependabot-Deadlock strukturell behoben.** `services/api` und
+  `services/collab-relay` waren gleichzeitig npm-Workspace-Mitglieder *und*
+  hatten eigene Lockfiles. Jeder Service-Bump musste dadurch zwei Lockfiles
+  zugleich aendern — das Root-Lockfile und das des Service. Dependabot kann
+  keine zwei Verzeichnisse in einem PR aendern, also war **kein einziger**
+  Service-PR je mergebar: Root-PRs liessen das Service-Lockfile veralten
+  (`npm ci --no-workspaces` bricht), Service-PRs das Root-Lockfile
+  (`npm ci` bricht). Die Services sind jetzt eigenstaendige Pakete; das
+  Root-Lockfile enthaelt keine Service-Dependency mehr (358 → 121 Pakete).
+- **CI war seit 26.07. bei jedem PR rot.** Ein neues HIGH-Advisory in
+  `brace-expansion` (GHSA-mh99-v99m-4gvg, CVE-2026-14257) kaskadierte ueber
+  `firebase-admin → google-gax → rimraf → glob → minimatch` in den
+  Produktivbaum und riss das `npm audit`-Gate — unabhaengig vom Inhalt des
+  jeweiligen PRs.
+- **Doppelte CI-Laeufe:** `push` und `pull_request` triggerten die komplette
+  Pipeline gleichzeitig fuer jeden PR-Branch. `push` laeuft jetzt nur noch
+  auf `main`.
+
+### Security
+- `rimraf`-Override (^6.1.3) in beiden Services hebt die Glob-Kette aus dem
+  brace-expansion-Advisory. `google-gax` deklariert `rimraf`, importiert es
+  aber nirgends — der Override ist ohne Laufzeitwirkung (verifiziert).
+- Audit-Gates in allen drei Baeumen wieder gruen.
+
+### Changed
+- `firebase-admin` 13.10.0 → 14.2.0 in `services/api` (die Peer-Range von
+  `firebase-functions` 7.3.0 laesst `^14` erstmals zu — der lange offene
+  Punkt ist damit erledigt), 14.1.0 → 14.2.0 im Relay.
+- `firebase-functions` 7.2.5 → 7.3.2, `ws` 8.20.x → 8.21.1,
+  `playwright` → 1.62.0, `eslint` → 10.8.0, `c8` → 12.0.0.
+- `actions/checkout` v4 → v7.0.1, `actions/setup-node` v4 → v7.0.0 (beide
+  SHA-gepinnt); beseitigt zugleich die Node-20-Deprecation-Warnung der Runner.
+- `uuid`-Override (^11.1.0) entfernt die `uuid@9`-Deprecation-Warnung beim
+  Installieren.
+
+### Accessibility
+- **Alle fuenf verbliebenen axe-Advisories beseitigt** — beide geprueften
+  Seiten melden jetzt null Verstoesse auf jeder Stufe (vorher als
+  dokumentierte Ausnahme toleriert):
+  Topbar ist ein `banner`-Landmark statt Inhalt ausserhalb jedes Landmarks;
+  der Toolbar-Streifen in `space.html` ist kein zweites `banner` mehr;
+  Countdown- und Site-Footer sind nicht laenger zwei konkurrierende
+  `contentinfo`-Landmarks; `space.html` hat eine (visuell verborgene) `h1`;
+  der Teilnehmerzaehler `#presence` ist als `role="status"` ausgezeichnet.
+
+### Added
+- Dependabot-Gruppierung: pro Manifest ein Sammel-PR fuer Patch/Minor und ein
+  separater fuer Majors, monatlich statt woechentlich.
+- Auto-Merge-Workflow fuer Dependabot-PRs ohne Major-Sprung. Merged nur bei
+  gruenem `verify` + `secret-scan` (Branch Protection bleibt massgeblich);
+  Majors bleiben mit Kommentar offen.
+- `docs/ops/DEPENDENCIES.md` — Lockfile-Topologie, Begruendung der Overrides
+  und die eine verbleibende, nicht behebbare Upstream-Warnung
+  (`node-domexception`: alle Versionen deprecated, da Node das nativ kann).
+
 ## [1.4.1] - 2026-07-16
 
 Nachziehen des Repos auf den Bootstrap-/Audit-Standard (Konzept:
