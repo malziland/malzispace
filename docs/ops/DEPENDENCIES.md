@@ -118,9 +118,47 @@ This cannot be resolved by version selection: **every** published version of
 exists only to polyfill something Node now provides natively. `fetch-blob@4.0.0`
 still depends on it, and `google-gax` still depends on `node-fetch@3`.
 
-It is an informational notice, not a vulnerability — the audit gate is green.
-It will disappear when Google's client libraries drop `node-fetch`. Do not
-suppress it with `--loglevel=error`; that would hide future genuine warnings.
+### Why this needs no action
+
+The package is a pure passthrough on modern Node. Its entire source is:
+
+```js
+if (!globalThis.DOMException) { /* fallback for old Node */ }
+module.exports = globalThis.DOMException
+```
+
+On Node 24 `DOMException` already exists before the `require`, so the fallback
+is skipped and the package hands back Node's built-in class, adding nothing.
+Verify with:
+
+```bash
+node -e "const before = globalThis.DOMException;
+         console.log(require('node-domexception') === before)"   # -> true
+```
+
+So the code already uses the native implementation. Upgrading is not an option
+either: *every* version is deprecated, because the maintainer deprecated the
+package as a whole — the notice is addressed to library authors like
+`fetch-blob`, not to consumers.
+
+Nothing gets switched off:
+
+1. npm deprecation is a registry flag; the package stays installable, and npm
+   does not remove packages that have dependents.
+2. The lockfile pins version and integrity hash, and the dependency is baked
+   into the Cloud Run image / Functions artifact at deploy time.
+3. Even if it vanished, no functionality would be lost — it only returns a
+   class Node provides itself.
+
+Note that `node-fetch@3.3.2` and `fetch-blob@3.2.0` are *not* deprecated; only
+the leaf is. The notice disappears once Google's client libraries move to
+native `fetch` — not via node-fetch 4, which has been in beta since 2022 and
+still depends on `fetch-blob`.
+
+Do not suppress it with `--loglevel=error`; that would hide future genuine
+warnings. Replacing it with a vendored shim is possible but buys nothing: it
+would add a `file:` dependency to both deployed artifacts to silence a line
+that already describes a no-op.
 
 ## Updating dependencies by hand
 
