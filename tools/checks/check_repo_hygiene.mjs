@@ -141,6 +141,29 @@ try {
   findings.push(`repo policy inspection failed: ${error && error.message ? error.message : error}`);
 }
 
+// Everything under apps/web/public is copied verbatim into build/hosting and
+// therefore published. An untracked file there is deployed to production while
+// existing only on one machine and being invisible to review, the a11y gate and
+// CI. This is not hypothetical: prototype-append-only.html was publicly
+// reachable for two months that way (removed in v1.4.3).
+try {
+  const untrackedPublic = execFileSync(
+    'git',
+    ['-C', ROOT_DIR, 'ls-files', '-z', '--others', '--exclude-standard', 'apps/web/public'],
+    { encoding: 'utf8' }
+  )
+    .split('\0')
+    .filter(Boolean);
+
+  for (const file of untrackedPublic) {
+    findings.push(
+      `${file}: untracked file inside apps/web/public — it would be published by the hosting build. Commit it or remove it.`
+    );
+  }
+} catch (error) {
+  findings.push(`untracked-public inspection failed: ${error && error.message ? error.message : error}`);
+}
+
 if (findings.length > 0) {
   console.error('Repository hygiene check failed:');
   findings.forEach((finding) => console.error(`- ${finding}`));

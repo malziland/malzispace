@@ -26,7 +26,16 @@ Rechtstexten.
 - **editor-simulator.html:** `aria-label` auf einem Element ohne erlaubte Rolle
   (axe `aria-prohibited-attr`, serious) und ein zweites `banner`-Landmark.
 
+### Removed
+- `prototype-append-only.html` aus dem ausgelieferten Verzeichnis entfernt. Der
+  UI-Entwurf vom Mai lag untracked in `apps/web/public/` und war dadurch
+  oeffentlich erreichbar, obwohl das Feature seit 1.3.0 released ist.
+
 ### Changed
+- **Repo-Hygiene-Check bricht jetzt bei ungetrackten Dateien in
+  `apps/web/public/`.** Alles dort wird vom Hosting-Build veroeffentlicht; eine
+  ungetrackte Datei geht damit live, existiert aber nur auf einem Rechner und
+  ist fuer Review, A11y-Gate und CI unsichtbar.
 - **A11y-Gate prueft jetzt alle Seiten** statt nur Landing + Editor. Genau diese
   Luecke hatte die obigen Fehler unbemerkt durchgehen lassen. Alle sieben
   ausgelieferten Seiten melden nun null Verstoesse und null Advisories.
