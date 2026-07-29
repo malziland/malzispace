@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>malzi.link — API Demo</title>
+<style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 900;font-display:swap;src:url('/Users/malziland/Projekte/malzilink_claude_code/malzilink_firebase/public/assets/fonts/Inter-latin.woff2') format('woff2')}
+:root{
+  --bg:#0f1020;--surface:#101327;--card:#14162b;
+  --text:#ffffff;--muted:#b9c0cf;
+  --accent:#00D1B2;--primary:#6C5CE7;
+  --border:rgba(255,255,255,.08);--danger:#FFD166;
+  --mz-bg:#0a0c10;--mz-accent:#38bdf8;--mz-border:#1e222d;--mz-text:#c8cdd8;--mz-surface:#111318;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font:14px/1.5 "Inter",-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+button{font-family:inherit}
+.hidden{display:none!important}
+
+/* ── App Layout (1:1 malzi.link) ── */
+.app{min-height:100vh;background:radial-gradient(800px 420px at 85% -10%,rgba(108,92,231,.12),transparent 60%),radial-gradient(700px 420px at -10% 10%,rgba(0,209,178,.08),transparent 60%),var(--bg)}
+.app-layout{display:flex;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:30;overflow-y:auto}
+.sidebar-header{padding:20px 18px 12px}
+.sidebar-logo-img{height:28px;display:block}
+.sidebar-nav{flex:1;padding:0 12px}
+.nav-section{margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s}
+.nav-item:hover{background:rgba(255,255,255,.04);color:#fff}
+.nav-item.active{background:rgba(108,92,231,.12);color:#fff}
+.nav-item-count{margin-left:auto;font-size:11px;background:rgba(255,255,255,.06);padding:2px 8px;border-radius:6px}
+.sidebar-token{margin:0 0 12px;padding:12px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.02)}
+.sidebar-token-title{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.sidebar-token-code{font-family:ui-monospace,monospace;font-size:24px;font-weight:700;letter-spacing:4px;color:#a6addb;text-align:center;padding:8px 0}
+.sidebar-token-row{display:flex;gap:6px;margin-top:8px}
+.sidebar-token-btn{flex:1;padding:7px 8px;font-size:11px;font-weight:600;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);cursor:pointer;transition:all .15s;text-align:center}
+.sidebar-token-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);margin-top:auto}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px}
+.sidebar-user-avatar{width:32px;height:32px;border-radius:8px;background:rgba(108,92,231,.2);display:flex;align-items:center;justify-content:center;font-size:16px}
+.sidebar-user-name{font-size:13px;font-weight:600}
+.sidebar-user-status{font-size:11px;color:var(--accent)}
+.sidebar-logout{margin-left:auto;width:28px;height:28px;border:none;background:rgba(255,255,255,.04);border-radius:6px;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.sidebar-logout:hover{background:rgba(255,107,107,.12);color:#ff6b6b}
+
+/* ── Main Content ── */
+.main-content{margin-left:260px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── View Switcher (Trainer / Teilnehmende) ── */
+.view-switcher{display:flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(15,16,32,.6);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.view-switch-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.view-switch-btn:hover{border-color:rgba(255,255,255,.2);color:#fff}
+.view-switch-btn.active{background:rgba(108,92,231,.15);border-color:rgba(108,92,231,.3);color:#fff}
+.view-switch-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+
+
+/* ── Main Body ── */
+.main-body{padding:20px}
+
+/* ── Links Panel Header ── */
+.links-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.links-panel-header h2{font-size:18px;font-weight:700}
+.btn-add-link{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#e040fb,#ab47bc);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(224,64,251,.3);transition:all .15s;flex-shrink:0;animation:pulse-add 2s ease-in-out infinite}
+.btn-add-link:hover{filter:brightness(1.15);transform:scale(1.08);animation:none}
+.btn-add-link svg{width:18px;height:18px}
+@keyframes pulse-add{0%,100%{box-shadow:0 2px 10px rgba(224,64,251,.3)}50%{box-shadow:0 2px 18px rgba(224,64,251,.55)}}
+
+/* Stats Bar */
+.stats-bar{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.stat-val{color:#fff;font-weight:600}
+
+/* ── Card Grid ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+
+/* ── Link Card ── */
+.link-card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:14px;display:flex;flex-direction:column;cursor:pointer;transition:border-color .2s,box-shadow .2s;overflow:hidden}
+.link-card:hover{border-color:rgba(255,255,255,.18);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.link-card.mz-card{border-color:rgba(56,189,248,.15)}
+.link-card.mz-card:hover{border-color:rgba(56,189,248,.3);box-shadow:0 8px 24px rgba(56,189,248,.08)}
+.card-banner{height:72px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(108,92,231,.2),rgba(0,209,178,.1))}
+.card-banner.mz{background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(108,92,231,.08))}
+.card-banner .domain-initial{font-size:1.8rem;font-weight:800;color:rgba(255,255,255,.18);text-transform:uppercase}
+.card-content{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card-header{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.04)}
+.card-order{width:22px;height:22px;border-radius:7px;background:rgba(108,92,231,.2);color:#a78bfa;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-title-area{flex:1;min-width:0}
+.card-title{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-url{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.card-badges{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.badge-sm{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
+.badge-type{background:rgba(56,189,248,.12);color:#38bdf8}
+.badge-read{background:rgba(255,186,83,.12);color:#ffe4b6}
+.badge-write{background:rgba(0,209,178,.12);color:#7dffbd}
+.badge-tag{background:rgba(108,92,231,.15);color:#a78bfa}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-live{font-size:10px;color:var(--mz-accent);display:flex;align-items:center;gap:4px}
+.pulse{width:6px;height:6px;border-radius:50%;background:#38bdf8;animation:mzp 1.5s infinite}
+@keyframes mzp{0%,100%{opacity:1}50%{opacity:.3}}
+.card-status{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(255,255,255,.04);margin-top:auto}
+.card-status-label{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.on{background:var(--accent)}.dot.off{background:#555}
+.card-actions{display:flex;gap:6px;align-items:center}
+.icon-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;border-radius:6px;background:transparent;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s}
+.icon-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.toggle-slider{display:inline-block;width:36px;height:20px;border-radius:10px;background:#2a2b3d;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle-slider.on{background:var(--accent)}
+.toggle-slider::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s}
+.toggle-slider.on::after{transform:translateX(16px)}
+
+/* ── Modals ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-dialog{background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:28px 32px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 48px rgba(0,0,0,.5);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(-12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-header h2{font-size:18px;font-weight:700}
+.modal-close{width:32px;height:32px;border:none;background:rgba(255,255,255,.08);border-radius:8px;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.modal-close:hover{background:rgba(255,255,255,.15);color:#fff}
+.field{margin-bottom:12px;display:flex;flex-direction:column}
+.field label{font-size:12px;color:#cbd5e1;margin-bottom:6px;font-weight:500}
+.field input,.field textarea,.field select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0f1227;color:#fff;font:14px "Inter",sans-serif;outline:none;resize:none}
+.field input:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,92,231,.15)}
+
+/* Type Selector */
+.type-selector{display:flex;gap:8px;margin-bottom:16px}
+.type-opt{flex:1;padding:16px 12px;border:2px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02);cursor:pointer;text-align:center;transition:all .2s}
+.type-opt:hover{border-color:rgba(255,255,255,.15)}
+.type-opt.active{border-color:var(--primary);background:rgba(108,92,231,.08)}
+.type-opt.active.mz{border-color:var(--mz-accent);background:rgba(56,189,248,.06)}
+.type-opt .t-icon{font-size:28px;margin-bottom:4px}
+.type-opt .t-name{font-size:14px;font-weight:700;display:block}
+.type-opt .t-desc{font-size:11px;color:var(--muted);display:block;margin-top:2px}
+
+/* malzispace fields */
+.mz-opts{margin-top:14px;padding:14px;border-radius:14px;border:1px solid rgba(56,189,248,.15);background:rgba(56,189,248,.03)}
+.mz-opts h4{margin:0 0 12px;font-size:13px;color:var(--mz-accent);font-weight:600}
+.mz-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mz-row label{font-size:13px;color:var(--muted);flex:1}
+.mz-toggle{width:40px;height:22px;border-radius:11px;background:#2a2b3d;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.mz-toggle.on{background:var(--mz-accent)}
+.mz-toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s}
+.mz-toggle.on::after{transform:translateX(18px)}
+/* TTL Slider */
+.ttl-slider{width:100%;accent-color:var(--mz-accent);cursor:pointer}
+.ttl-label{font-size:12px;color:var(--mz-accent);font-weight:600;text-align:right;min-width:60px}
+/* Prefill */
+.prefill-box{margin-top:10px;padding:12px;border-radius:12px;border:1px solid rgba(56,189,248,.2);background:rgba(56,189,248,.03)}
+.prefill-box label{font-size:12px;color:var(--mz-accent);margin-bottom:6px;display:block;font-weight:600}
+.prefill-toolbar{display:flex;gap:4px;padding:6px;border:1px solid rgba(56,189,248,.15);border-bottom:none;border-radius:10px 10px 0 0;background:rgba(56,189,248,.05)}
+.prefill-toolbar .tool-btn{min-width:30px;width:30px;min-height:26px;font-size:12px}
+.prefill-editor{width:100%;padding:12px;border-radius:0 0 10px 10px;border:1px solid rgba(56,189,248,.15);background:rgba(56,189,248,.03);color:var(--mz-text);font:14px/1.6 "Inter",sans-serif;outline:none;min-height:180px;overflow-y:auto;white-space:pre-wrap}
+.prefill-editor:empty::before{content:attr(data-placeholder);color:rgba(200,205,216,.35);pointer-events:none}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.toggle-row span{font-size:13px;color:var(--muted)}
+.btn-create{width:100%;padding:13px;border-radius:14px;background:linear-gradient(90deg,var(--primary),var(--accent));color:#0a0a0a;font-weight:800;border:none;cursor:pointer;font-size:14px;margin-top:16px;transition:all .15s}
+.btn-create:hover{filter:brightness(1.1);transform:translateY(-1px)}
+
+/* ── Editor Overlay (when clicking a space card) ── */
+.editor-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
+.editor-overlay.open{display:flex}
+.editor-modal{background:var(--mz-bg);border:1px solid var(--mz-border);border-radius:18px;width:100%;max-width:900px;height:80vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:modalIn .25s ease}
+.editor-modal-header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--mz-border);background:rgba(15,16,32,.4)}
+.editor-modal-header .title{font-weight:700;font-size:15px;color:var(--mz-text);flex:1}
+.editor-modal-header .close-x{width:30px;height:30px;border:none;background:rgba(255,255,255,.06);border-radius:8px;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.editor-modal-header .close-x:hover{background:rgba(255,255,255,.12);color:#fff}
+.editor-mode-bar{padding:6px 14px;font-size:12px;text-align:center;font-weight:500}
+.editor-mode-bar.read{background:rgba(255,186,83,.08);color:#ffe4b6}
+.editor-mode-bar.write{background:rgba(0,209,178,.08);color:#7dffbd}
+/* ── Toolbar (1:1 malzispace) ── */
+.editor-tools{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);border-radius:18px 18px 0 0;background:linear-gradient(180deg,rgba(16,22,31,.94),rgba(16,22,31,.82));backdrop-filter:blur(8px)}
+.tool-group{display:inline-flex;align-items:center;gap:6px;padding:4px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(8,14,22,.45);flex-wrap:wrap}
+.tool-btn{appearance:none;border:1px solid rgba(255,255,255,.12);background:var(--mz-surface);color:var(--mz-text);border-radius:8px;min-height:32px;min-width:38px;width:38px;padding:0;font-size:13px;line-height:1.15;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+.tool-btn:hover{background:#162133;border-color:rgba(56,189,248,.55)}
+.tool-btn.is-active{border-color:rgba(56,189,248,.75);box-shadow:0 0 0 2px rgba(56,189,248,.20)}
+.tool-btn .btn-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px}
+.tool-btn .btn-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tool-btn .btn-icon.txt{font-size:13px;width:auto;min-width:16px;height:auto;line-height:1;text-align:center}
+/* Editor area with line numbers */
+.editor-area{flex:1;display:flex;overflow-y:auto;min-height:0;position:relative}
+.line-numbers{position:sticky;left:0;padding:16px 0;min-width:44px;text-align:right;font:15px/1.6 ui-monospace,monospace;color:rgba(200,205,216,.3);user-select:none;border-right:1px solid var(--mz-border);background:rgba(0,0,0,.2);flex-shrink:0;z-index:1}
+.line-numbers span{display:block;padding:0 10px 0 8px;height:24px;line-height:24px}
+.editor-body{flex:1;padding:16px 18px;font:15px/1.6 "Inter",sans-serif;color:var(--mz-text);white-space:pre-wrap;outline:none;line-height:24px}
+.editor-body[contenteditable="false"]{opacity:.6;cursor:default}
+.editor-body b{font-weight:800}
+/* Copy button */
+.copy-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;margin-left:auto}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.copy-btn.copied{color:var(--mz-accent);border-color:rgba(56,189,248,.3)}
+.editor-footer{padding:8px 14px;border-top:1px solid var(--mz-border);text-align:center;font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+
+/* ── Participant View ── */
+.part-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:20px}
+.part-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s}
+.part-card:hover{border-color:rgba(255,255,255,.18);box-shadow:0 8px 20px rgba(0,0,0,.3);transform:translateY(-2px)}
+.part-card.mz{border-color:rgba(56,189,248,.15)}
+.part-card.mz:hover{border-color:rgba(56,189,248,.3)}
+.part-card .pc-title{font-weight:700;font-size:15px;margin-bottom:4px}
+.part-card .pc-desc{font-size:12px;color:var(--muted);margin-bottom:8px}
+.part-card .pc-url{font-size:11px;color:var(--accent);word-break:break-all}
+.part-card .pc-badges{display:flex;gap:4px;margin-top:8px}
+
+/* ── Webhook panel (option 3) ── */
+.wh-bar{margin-top:20px;padding:14px;border-radius:14px;border:1px solid rgba(108,92,231,.2);background:rgba(108,92,231,.03)}
+.wh-bar h4{margin:0 0 8px;font-size:12px;color:#a78bfa;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.wh-event{padding:6px 10px;border-radius:6px;font-size:11px;font-family:ui-monospace,monospace;display:flex;align-items:center;gap:6px;margin-bottom:4px;background:rgba(255,255,255,.02);border:1px solid var(--border)}
+.wh-event .wd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main-content{margin-left:0}
+  .card-grid,.part-grid{grid-template-columns:1fr}
+  .editor-tools{gap:4px;padding:8px 6px}
+  .tool-group{gap:3px;padding:3px}
+  .tool-btn{min-width:32px;width:32px;min-height:28px}
+  .copy-btn{font-size:0;gap:0;padding:5px 8px}
+  .copy-btn svg{width:16px;height:16px}
+  .copy-btn span{display:none}
+  .editor-modal-header{flex-wrap:wrap;gap:6px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="app-layout">
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <img class="sidebar-logo-img" src="/Users/malziland/Projekte/malzilink_claude_code/malzilink_firebase/public/assets/icons/malzilink-logo.svg" alt="malziLINK" onerror="this.outerHTML='<div style=&quot;font-size:18px;font-weight:800&quot;>malzi<span style=&quot;color:#00D1B2&quot;>.link</span></div>'">
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-token">
+      <div class="sidebar-token-title">Teilnehmer:innen-Link</div>
+      <div class="sidebar-token-code">X7K9M2</div>
+      <div class="sidebar-token-row">
+        <button class="sidebar-token-btn" onclick="alert('Link kopiert!')">Link kopieren</button>
+        <button class="sidebar-token-btn" onclick="alert('QR-Code anzeigen')">Link anzeigen</button>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span class="nav-item-name">Alle Links</span>
+        <span class="nav-item-count" id="linkCount">4</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">&#128100;</div>
+      <div>
+        <div class="sidebar-user-name">Trainer:in</div>
+        <div class="sidebar-user-status">&#9679; Aktiv</div>
+      </div>
+      <button class="sidebar-logout" title="Abmelden">&#9211;</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════ MAIN CONTENT ═══════ -->
+<main class="main-content">
+
+  <!-- View Switcher -->
+  <div class="view-switcher">
+    <button class="view-switch-btn active" id="btnTrainer" onclick="showView('trainer')">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Trainer:in
+    </button>
+    <button class="view-switch-btn" id="btnParticipant" onclick="showView('participant')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Teilnehmende
+    </button>
+
+  </div>
+
+  <!-- ═══ TRAINER VIEW ═══ -->
+  <div class="main-body" id="trainerView">
+    <div class="links-panel-header">
+      <h2>Alle Links</h2>
+      <button class="btn-add-link" onclick="openCreate()" title="Neuen Link anlegen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    <div class="stats-bar">
+      <span><span class="stat-val" id="statTotal">4</span> Links</span>
+      <span><span class="stat-val">3</span> freigegeben</span>
+      <span><span class="stat-val">1</span> gesperrt</span>
+    </div>
+
+    <div class="card-grid" id="cardGrid">
+      <!-- Card 1 -->
+      <div class="link-card" onclick="window.open('#','_blank')">
+        <div class="card-banner"><span class="domain-initial">F</span></div>
+        <div class="card-content">
+          <div class="card-header"><span class="card-order">1</span><div class="card-title-area"><div class="card-title">Feedback-Formular</div><div class="card-url">forms.google.com/d/e/1FAIp...</div></div></div>
+          <div class="card-desc">Bitte füllt das Feedback bis zum Ende der Session aus.</div>
+          <div class="card-badges"><span class="badge-sm badge-tag">feedback</span></div>
+          <div class="card-status"><div class="card-status-label"><span class="dot on"></span>Freigegeben</div><div class="card-actions"><button class="icon-btn">&#9998;</button><div class="toggle-slider on" onclick="event.stopPropagation();this.classList.toggle('on')"></div></div></div>
+        </div>
+      </div>
+      <!-- Card 2 -->
+      <div class="link-card" onclick="window.open('#','_blank')">
+        <div class="card-banner" style="background:linear-gradient(135deg,rgba(0,209,178,.15),rgba(108,92,231,.08))"><span class="domain-initial">P</span></div>
+        <div class="card-content">
+          <div class="card-header"><span class="card-order">2</span><div class="card-title-area"><div class="card-title">Präsentations-Folien</div><div class="card-url">docs.google.com/presentation/...</div></div></div>
+          <div class="card-desc">Alle Folien zum heutigen Workshop.</div>
+          <div class="card-badges"><span class="badge-sm badge-tag">material</span></div>
+          <div class="card-status"><div class="card-status-label"><span class="dot on"></span>Freigegeben</div><div class="card-actions"><button class="icon-btn">&#9998;</button><div class="toggle-slider on" onclick="event.stopPropagation();this.classList.toggle('on')"></div></div></div>
+        </div>
+      </div>
+      <!-- Card 3: MALZISPACE -->
+      <div class="link-card mz-card" id="mzCardTrainer" onclick="activeSpaceId='default';showCountdown('default');openEditor('trainer')">
+        <div class="card-banner mz">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
+        </div>
+        <div class="card-content">
+          <div class="card-header"><span class="card-order">3</span><div class="card-title-area"><div class="card-title" id="mzCardTitle">Workshop-Notizen</div><div class="card-badges"><span class="badge-sm badge-type">Space</span><span class="badge-sm badge-read" id="mzCardMode">Nur Lesen</span></div></div></div>
+          <div class="card-desc">Gemeinsame Notizen für alle Teilnehmer.</div>
+          <div class="card-live"><span class="pulse"></span> <span id="mzLiveCount">3 Teilnehmer aktiv</span></div>
+          <div class="card-status"><div class="card-status-label"><span class="dot on"></span>Freigegeben</div><div class="card-actions"><button class="icon-btn" onclick="event.stopPropagation();openCreate('edit')">&#9998;</button><div class="toggle-slider on" onclick="event.stopPropagation();this.classList.toggle('on')"></div></div></div>
+        </div>
+      </div>
+      <!-- Card 4: Locked -->
+      <div class="link-card" onclick="window.open('#','_blank')">
+        <div class="card-banner" style="background:linear-gradient(135deg,rgba(56,189,248,.1),rgba(108,92,231,.08))"><span class="domain-initial">Q</span></div>
+        <div class="card-content">
+          <div class="card-header"><span class="card-order">4</span><div class="card-title-area"><div class="card-title">Quiz (noch gesperrt)</div><div class="card-url">kahoot.it/challenge/abc123</div></div></div>
+          <div class="card-desc">Das Quiz wird erst nach der Pause freigeschaltet.</div>
+          <div class="card-badges"><span class="badge-sm badge-tag">quiz</span></div>
+          <div class="card-status"><div class="card-status-label"><span class="dot off"></span>Gesperrt</div><div class="card-actions"><button class="icon-btn">&#9998;</button><div class="toggle-slider" onclick="event.stopPropagation();this.classList.toggle('on')"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Webhook Bar -->
+    <div class="wh-bar" id="whBar">
+      <h4>Webhook-Events (automatisch empfangen)</h4>
+      <div class="wh-event"><span class="wd" style="background:var(--accent)"></span><span style="color:var(--accent)">space.created</span><span style="color:var(--muted);margin-left:auto">vor 2h</span></div>
+      <div class="wh-event"><span class="wd" style="background:#38bdf8"></span><span style="color:#38bdf8">peer.count_changed</span><span style="color:var(--muted);margin-left:auto">count: 3</span></div>
+      <div class="wh-event"><span class="wd" style="background:#ff6b6b"></span><span style="color:#ff6b6b">space.expired</span><span style="color:var(--muted);margin-left:auto">Link automatisch gelöscht</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ PARTICIPANT VIEW ═══ -->
+  <div class="hidden" id="participantView">
+    <div style="text-align:center;padding:20px 20px 0">
+      <div style="font-size:13px;color:var(--muted)">Teilnehmer-Ansicht — Code: <strong style="color:#fff;font-family:ui-monospace,monospace;letter-spacing:2px">X7K9M2</strong></div>
+    </div>
+    <div class="part-grid">
+      <!-- Participant sees only unlocked links -->
+      <div class="part-card" onclick="alert('Öffnet: forms.google.com')">
+        <div class="pc-title">Feedback-Formular</div>
+        <div class="pc-desc">Bitte füllt das Feedback bis zum Ende der Session aus.</div>
+        <div class="pc-url">forms.google.com</div>
+      </div>
+      <div class="part-card" onclick="alert('Öffnet: docs.google.com')">
+        <div class="pc-title">Präsentations-Folien</div>
+        <div class="pc-desc">Alle Folien zum heutigen Workshop.</div>
+        <div class="pc-url">docs.google.com</div>
+      </div>
+      <!-- MALZISPACE Card — clicking opens the editor -->
+      <div class="part-card mz" onclick="activeSpaceId='default';showCountdown('default');openEditor('participant')">
+        <div class="pc-title">Workshop-Notizen</div>
+        <div class="pc-desc">Gemeinsame Notizen für alle Teilnehmer.</div>
+        <div class="pc-badges">
+          <span class="badge-sm badge-type">Space</span>
+          <span class="badge-sm" id="partModeBadge" style="background:rgba(255,186,83,.12);color:#ffe4b6">Nur Lesen</span>
+        </div>
+        <div class="card-live" style="margin-top:8px"><span class="pulse"></span> 3 Teilnehmer aktiv</div>
+      </div>
+      <!-- Quiz is locked — not shown to participants -->
+    </div>
+
+    <!-- Webhook bar for participant view too -->
+    <div style="padding:0 20px">
+      <div class="wh-bar" id="whBarPart">
+        <h4>malzi.link reagiert automatisch auf Events</h4>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">Wenn der Space abläuft, verschwindet die Karte automatisch. Wenn Teilnehmer beitreten, aktualisiert sich die Zahl live. <strong style="color:#fff">Kein manuelles Eingreifen nötig.</strong></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+</div>
+
+<!-- ═══════ CREATE MODAL ═══════ -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2 id="createModalTitle">Neuen Link anlegen</h2>
+      <button class="modal-close" onclick="closeCreate()">&times;</button>
+    </div>
+
+    <div id="typeQuestion" style="font-size:12px;color:var(--muted);margin-bottom:10px">Was möchtest du teilen?</div>
+    <div class="type-selector" id="typeSelector">
+      <div class="type-opt" id="typeLink" onclick="selectType('link')">
+        <div class="t-icon">&#128279;</div>
+        <span class="t-name">Link</span>
+        <span class="t-desc">URL zu einer Webseite</span>
+      </div>
+      <div class="type-opt active mz" id="typeEditor" onclick="selectType('editor')">
+        <div class="t-icon">&#9998;</div>
+        <span class="t-name">Space</span>
+        <span class="t-desc">Gemeinsamer Text-Editor</span>
+      </div>
+    </div>
+
+    <!-- Link Fields -->
+    <div id="linkFields" class="hidden">
+      <div class="field"><label>Titel *</label><input type="text" placeholder="z.B. Feedback-Formular"></div>
+      <div class="field"><label>URL *</label><input type="text" placeholder="https://..."></div>
+      <div class="field"><label>Beschreibung</label><textarea rows="2" placeholder="Kurzbeschreibung"></textarea></div>
+    </div>
+
+    <!-- Editor Fields -->
+    <div id="editorFields">
+      <div class="field"><label>Titel *</label><input type="text" id="cTitle" placeholder="z.B. Workshop-Notizen"></div>
+      <div class="field"><label>Beschreibung</label><textarea rows="2" id="cDesc" placeholder="z.B. Gemeinsame Notizen für alle Teilnehmer"></textarea></div>
+
+      <div class="mz-opts">
+        <h4>Editor-Einstellungen</h4>
+        <div class="mz-row">
+          <label>Teilnehmer dürfen bearbeiten</label>
+          <div class="mz-toggle" id="cWriteToggle" onclick="this.classList.toggle('on');updateModeBadges()"></div>
+        </div>
+        <div class="mz-row">
+          <label>Lebensdauer</label>
+          <input type="range" class="ttl-slider" id="cTTL" min="1" max="7" value="7" oninput="document.getElementById('ttlVal').textContent=this.value+' Tag'+(this.value>1?'e':'')">
+          <span class="ttl-label" id="ttlVal">7 Tage</span>
+        </div>
+
+        <!-- Prefill Editor -->
+        <div id="prefillSection">
+          <div class="prefill-box">
+            <label>Inhalt vorausfüllen</label>
+            <div class="prefill-toolbar" id="prefillToolbar">
+              <button type="button" class="tool-btn" data-pfcmd="bold" title="Fett" onmousedown="event.preventDefault()"><span class="btn-icon txt"><strong>B</strong></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="italic" title="Kursiv" onmousedown="event.preventDefault()"><span class="btn-icon txt"><em>I</em></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="underline" title="Unterstrichen" onmousedown="event.preventDefault()"><span class="btn-icon txt"><u>U</u></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="justifyLeft" title="Linksbündig" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h12M3 14h18M3 18h12"/></svg></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="justifyCenter" title="Zentriert" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M6 10h12M3 14h18M6 18h12"/></svg></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="justifyRight" title="Rechtsbündig" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M9 10h12M3 14h18M9 18h12"/></svg></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="insertUnorderedList" title="Aufzählung" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M9 7h11M9 12h11M9 17h11"/><path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01"/></svg></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="insertOrderedList" title="Nummerierte Liste" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3.5 7h3M5 6v4M3.5 14h3l-3 3h3"/><path d="M9 7h11M9 12h11M9 17h11"/></svg></span></button>
+              <button type="button" class="tool-btn" data-pfcmd="insertHorizontalRule" title="Horizontale Linie" onmousedown="event.preventDefault()"><span class="btn-icon txt">—</span></button>
+            </div>
+            <div id="cPrefill" class="prefill-editor" contenteditable="true" data-placeholder="z.B. Willkommen zum Workshop! Bitte tragt hier eure Notizen ein..."></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toggle-row" style="margin-top:12px">
+        <div class="mz-toggle on" onclick="this.classList.toggle('on')"></div>
+        <span>Sofort freischalten</span>
+      </div>
+    </div>
+
+    <button class="btn-create" id="btnCreate" onclick="doCreate()">Space anlegen</button>
+  </div>
+</div>
+
+<!-- ═══════ EDITOR OVERLAY ═══════ -->
+<div class="editor-overlay" id="editorOverlay">
+  <div class="editor-modal">
+    <div class="editor-modal-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
+      <span class="title" id="editorTitle">Workshop-Notizen</span>
+      <span class="badge-sm badge-type">Space</span>
+      <span class="badge-sm" id="editorModeBadge" style="background:rgba(255,186,83,.12);color:#ffe4b6">Nur Lesen</span>
+      <div class="card-live" style="margin-left:8px"><span class="pulse"></span> 3 aktiv</div>
+      <button class="close-x" onclick="closeEditor()">&times;</button>
+    </div>
+    <div class="editor-mode-bar read" id="editorModeBar">Nur Lesen — du kannst den Text ansehen und kopieren</div>
+    <div class="editor-tools" id="editorToolbar">
+      <div class="tool-group" id="tgTextStyle">
+        <button type="button" class="tool-btn" data-cmd="bold" title="Fett" onmousedown="event.preventDefault()"><span class="btn-icon txt"><strong>B</strong></span></button>
+        <button type="button" class="tool-btn" data-cmd="italic" title="Kursiv" onmousedown="event.preventDefault()"><span class="btn-icon txt"><em>I</em></span></button>
+        <button type="button" class="tool-btn" data-cmd="underline" title="Unterstrichen" onmousedown="event.preventDefault()"><span class="btn-icon txt"><u>U</u></span></button>
+      </div>
+      <div class="tool-group" id="tgAlign">
+        <button type="button" class="tool-btn" data-cmd="justifyLeft" title="Linksbündig" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h12M3 14h18M3 18h12"/></svg></span></button>
+        <button type="button" class="tool-btn" data-cmd="justifyCenter" title="Zentriert" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M6 10h12M3 14h18M6 18h12"/></svg></span></button>
+        <button type="button" class="tool-btn" data-cmd="justifyRight" title="Rechtsbündig" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M9 10h12M3 14h18M9 18h12"/></svg></span></button>
+      </div>
+      <div class="tool-group" id="tgLists">
+        <button type="button" class="tool-btn" data-cmd="insertUnorderedList" title="Aufzählung" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M9 7h11M9 12h11M9 17h11"/><path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01"/></svg></span></button>
+        <button type="button" class="tool-btn" data-cmd="insertOrderedList" title="Nummerierte Liste" onmousedown="event.preventDefault()"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3.5 7h3M5 6v4M3.5 14h3l-3 3h3"/><path d="M9 7h11M9 12h11M9 17h11"/></svg></span></button>
+        <button type="button" class="tool-btn" data-cmd="insertHorizontalRule" title="Horizontale Linie" onmousedown="event.preventDefault()"><span class="btn-icon txt">—</span></button>
+      </div>
+      <button class="copy-btn" id="copyBtn" onclick="copyContent()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span id="copyLabel">Kopieren</span>
+      </button>
+    </div>
+    <div class="editor-area">
+      <div class="line-numbers" id="lineNumbers"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+      <div class="editor-body" id="editorBody" contenteditable="false"><b>Workshop: API-Integration mit malzispace</b>
+
+Willkommen! In diesem Workshop lernt ihr,
+wie man verschlüsselte Editoren einbettet.
+
+Agenda:
+  1. Grundlagen der E2E-Verschlüsselung
+  2. Embed-API ausprobieren
+  3. Fragen und Diskussion</div>
+    </div>
+    <div class="editor-footer" id="editorCountdown">Automatische Löschung in 6d 23:42:17</div>
+  </div>
+</div>
+
+<script>
+let writeMode = false;
+let currentView = 'trainer';
+let createMode = 'new'; // 'new' or 'edit'
+let spaceCount = 1;
+
+/* ── View Switching ── */
+function showView(v) {
+  currentView = v;
+  document.getElementById('trainerView').classList.toggle('hidden', v !== 'trainer');
+  document.getElementById('participantView').classList.toggle('hidden', v !== 'participant');
+  document.getElementById('btnTrainer').classList.toggle('active', v === 'trainer');
+  document.getElementById('btnParticipant').classList.toggle('active', v === 'participant');
+}
+
+/* ── Create Modal ── */
+function openCreate(mode) {
+  createMode = mode === 'edit' ? 'edit' : 'new';
+  document.getElementById('createModal').classList.add('open');
+  const isEdit = createMode === 'edit';
+  // Hide type selector + question when editing
+  document.getElementById('typeQuestion').style.display = isEdit ? 'none' : '';
+  document.getElementById('typeSelector').style.display = isEdit ? 'none' : '';
+  if (isEdit) {
+    document.getElementById('createModalTitle').textContent = 'Space bearbeiten';
+    document.getElementById('btnCreate').textContent = 'Änderungen speichern';
+    document.getElementById('editorFields').classList.remove('hidden');
+    document.getElementById('linkFields').classList.add('hidden');
+  } else {
+    document.getElementById('createModalTitle').textContent = 'Neuen Link anlegen';
+    document.getElementById('btnCreate').textContent = document.getElementById('typeEditor').classList.contains('active') ? 'Space anlegen' : 'Link anlegen';
+    document.getElementById('cTitle').value = '';
+    document.getElementById('cDesc').value = '';
+    document.getElementById('cPrefill').innerHTML = '';
+    document.getElementById('cTTL').value = 7;
+    document.getElementById('ttlVal').textContent = '7 Tage';
+    document.getElementById('cWriteToggle').classList.remove('on');
+  }
+}
+function closeCreate() {
+  document.getElementById('createModal').classList.remove('open');
+}
+function selectType(t) {
+  document.getElementById('typeLink').classList.toggle('active', t==='link');
+  document.getElementById('typeLink').classList.remove('mz');
+  document.getElementById('typeEditor').classList.toggle('active', t==='editor');
+  if(t==='editor') document.getElementById('typeEditor').classList.add('mz');
+  document.getElementById('linkFields').classList.toggle('hidden', t!=='link');
+  document.getElementById('editorFields').classList.toggle('hidden', t!=='editor');
+  document.getElementById('btnCreate').textContent = t==='editor' ? 'Space anlegen' : 'Link anlegen';
+}
+
+function doCreate() {
+  const isEditor = document.getElementById('typeEditor').classList.contains('active');
+  const title = document.getElementById('cTitle').value || (isEditor ? 'Neuer Space' : 'Neuer Link');
+  const desc = document.getElementById('cDesc').value || '';
+  const days = document.getElementById('cTTL').value;
+  writeMode = document.getElementById('cWriteToggle').classList.contains('on');
+  const hasPrefill = getPrefillHtml().length > 0;
+
+  if (createMode === 'edit') {
+    document.getElementById('mzCardTitle').textContent = title;
+    document.getElementById('editorTitle').textContent = title;
+    updateModeBadges();
+    if (hasPrefill) setPrefillContent();
+    // Edit: update expiry with new TTL from now
+    spaceExpiry[activeSpaceId] = Date.now() + Number(days) * 24 * 60 * 60 * 1000;
+    showCountdown(activeSpaceId);
+    closeCreate();
+    return;
+  }
+
+  // ── Create new card ──
+  if (isEditor) {
+    spaceCount++;
+    const spaceId = 'space' + spaceCount;
+    const num = document.getElementById('cardGrid').children.length + 1;
+    const modeText = writeMode ? 'Bearbeiten' : 'Nur Lesen';
+    const modeBadge = writeMode ? 'badge-write' : 'badge-read';
+    const prefillHtml = getPrefillHtml();
+
+    const card = document.createElement('div');
+    card.className = 'link-card mz-card';
+    card.onclick = () => {
+      activeSpaceId = spaceId;
+      document.getElementById('editorTitle').textContent = title;
+      if (prefillHtml) document.getElementById('editorBody').innerHTML = prefillHtml;
+      showCountdown(spaceId);
+      updateLineNumbers();
+      openEditor('trainer');
+    };
+    card.innerHTML = '<div class="card-banner mz"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg></div>'
+      + '<div class="card-content">'
+      + '<div class="card-header"><span class="card-order">' + num + '</span><div class="card-title-area"><div class="card-title">' + title + '</div><div class="card-badges"><span class="badge-sm badge-type">Space</span><span class="badge-sm ' + modeBadge + '">' + modeText + '</span></div></div></div>'
+      + (desc ? '<div class="card-desc">' + desc + '</div>' : '')
+      + '<div class="card-live"><span class="pulse"></span> 0 Teilnehmer aktiv</div>'
+      + '<div class="card-status"><div class="card-status-label"><span class="dot on"></span>Freigegeben</div><div class="card-actions"><div class="toggle-slider on" onclick="event.stopPropagation();this.classList.toggle(\'on\')"></div></div></div>'
+      + '</div>';
+    document.getElementById('cardGrid').appendChild(card);
+
+    // Add to participant view
+    const pCard = document.createElement('div');
+    pCard.className = 'part-card mz';
+    pCard.onclick = () => {
+      activeSpaceId = spaceId;
+      document.getElementById('editorTitle').textContent = title;
+      if (prefillHtml) document.getElementById('editorBody').innerHTML = prefillHtml;
+      showCountdown(spaceId);
+      updateLineNumbers();
+      openEditor('participant');
+    };
+    pCard.innerHTML = '<div class="pc-title">' + title + '</div>'
+      + (desc ? '<div class="pc-desc">' + desc + '</div>' : '')
+      + '<div class="pc-badges"><span class="badge-sm badge-type">Space</span><span class="badge-sm ' + modeBadge + '">' + modeText + '</span></div>'
+      + '<div class="card-live" style="margin-top:8px"><span class="pulse"></span> 0 Teilnehmer aktiv</div>';
+    document.querySelector('.part-grid').appendChild(pCard);
+
+    // Webhook event
+    const whE = document.createElement('div');
+    whE.className = 'wh-event';
+    whE.innerHTML = '<span class="wd" style="background:var(--accent)"></span><span style="color:var(--accent)">space.created</span><span style="color:var(--muted);margin-left:auto">gerade eben</span>';
+    document.getElementById('whBar').appendChild(whE);
+
+    updateCounts();
+    startCountdown(Number(days), spaceId);
+  }
+
+  closeCreate();
+}
+
+/* ── Prefill: transfer rich content from prefill-editor to main editor ── */
+function setPrefillContent() {
+  const pf = document.getElementById('cPrefill');
+  const body = document.getElementById('editorBody');
+  body.innerHTML = pf.innerHTML;
+  updateLineNumbers();
+}
+
+function getPrefillHtml() {
+  return document.getElementById('cPrefill').innerHTML.trim();
+}
+
+function initPrefillToolbar() {
+  document.getElementById('prefillToolbar').addEventListener('click', e => {
+    const btn = e.target.closest('[data-pfcmd]');
+    if (!btn) return;
+    e.preventDefault();
+    const cmd = btn.getAttribute('data-pfcmd');
+    document.getElementById('cPrefill').focus();
+    document.execCommand(cmd, false, null);
+  });
+}
+
+/* ── Real Countdown Timer ── */
+let countdownInterval = null;
+// Store expiry per space. Key = spaceId, value = timestamp
+const spaceExpiry = {};
+let activeSpaceId = 'default';
+
+function startCountdown(days, spaceId) {
+  const id = spaceId || activeSpaceId;
+  // Only set expiry once — never reset on re-open
+  if (!spaceExpiry[id]) {
+    spaceExpiry[id] = Date.now() + days * 24 * 60 * 60 * 1000;
+  }
+  showCountdown(id);
+}
+
+function showCountdown(spaceId) {
+  const id = spaceId || activeSpaceId;
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => tickCountdown(id), 1000);
+  tickCountdown(id);
+}
+
+function tickCountdown(spaceId) {
+  const el = document.getElementById('editorCountdown');
+  const end = spaceExpiry[spaceId || activeSpaceId];
+  if (!el || !end) return;
+  const diff = end - Date.now();
+  if (diff <= 0) {
+    el.textContent = 'Space abgelaufen — automatisch gelöscht';
+    el.style.color = '#ff6b6b';
+    clearInterval(countdownInterval);
+    return;
+  }
+  el.style.color = '';
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const pad = n => String(n).padStart(2, '0');
+  el.textContent = 'Automatische Löschung in ' + d + 'd ' + pad(h) + ':' + pad(m) + ':' + pad(s);
+}
+
+function updateCounts() {
+  const total = document.getElementById('cardGrid').children.length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('linkCount').textContent = total;
+}
+
+/* ── Mode Badges ── */
+function updateModeBadges() {
+  writeMode = document.getElementById('cWriteToggle').classList.contains('on');
+  const readBadge = writeMode ? 'badge-write' : 'badge-read';
+  const readText = writeMode ? 'Bearbeiten' : 'Nur Lesen';
+
+  const el = id => document.getElementById(id);
+  if (el('mzCardMode')) {
+    el('mzCardMode').className = 'badge-sm ' + readBadge;
+    el('mzCardMode').textContent = readText;
+  }
+  el('editorModeBadge').textContent = readText;
+  el('editorModeBadge').style.background = writeMode ? 'rgba(0,209,178,.12)' : 'rgba(255,186,83,.12)';
+  el('editorModeBadge').style.color = writeMode ? '#7dffbd' : '#ffe4b6';
+  if (el('partModeBadge')) {
+    el('partModeBadge').textContent = readText;
+    el('partModeBadge').style.background = writeMode ? 'rgba(0,209,178,.12)' : 'rgba(255,186,83,.12)';
+    el('partModeBadge').style.color = writeMode ? '#7dffbd' : '#ffe4b6';
+  }
+}
+
+/* ── Editor Overlay ── */
+function openEditor(role) {
+  const isTrainer = role === 'trainer';
+  const canWrite = isTrainer || writeMode;
+
+  document.getElementById('editorOverlay').classList.add('open');
+  updateLineNumbers();
+  document.getElementById('editorBody').contentEditable = canWrite ? 'true' : 'false';
+
+  // Hide formatting tool-groups in read-only, copy button always visible
+  document.querySelectorAll('#editorToolbar .tool-group').forEach(g => {
+    g.style.display = canWrite ? '' : 'none';
+  });
+
+  const modeBar = document.getElementById('editorModeBar');
+  if (isTrainer) {
+    modeBar.className = 'editor-mode-bar write';
+    modeBar.textContent = 'Trainer-Ansicht — du kannst bearbeiten';
+  } else if (writeMode) {
+    modeBar.className = 'editor-mode-bar write';
+    modeBar.textContent = 'Bearbeiten — du kannst den Text ändern';
+  } else {
+    modeBar.className = 'editor-mode-bar read';
+    modeBar.textContent = 'Nur Lesen — du kannst den Text ansehen und kopieren';
+  }
+}
+function closeEditor() {
+  document.getElementById('editorOverlay').classList.remove('open');
+}
+
+/* ── Toolbar Commands (1:1 malzispace) ── */
+function initToolbar() {
+  const toolbar = document.getElementById('editorToolbar');
+  toolbar.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    e.preventDefault();
+    const cmd = btn.getAttribute('data-cmd');
+    const body = document.getElementById('editorBody');
+    if (body.contentEditable !== 'true') return;
+    body.focus();
+    document.execCommand(cmd, false, null);
+    updateToolbarState();
+    updateLineNumbers();
+  });
+}
+
+function updateToolbarState() {
+  document.querySelectorAll('#editorToolbar [data-cmd]').forEach(btn => {
+    const cmd = btn.getAttribute('data-cmd');
+    let active = false;
+    try {
+      if (['bold','italic','underline'].includes(cmd)) {
+        active = document.queryCommandState(cmd);
+      } else if (cmd === 'justifyLeft') {
+        active = document.queryCommandState('justifyLeft');
+      } else if (cmd === 'justifyCenter') {
+        active = document.queryCommandState('justifyCenter');
+      } else if (cmd === 'justifyRight') {
+        active = document.queryCommandState('justifyRight');
+      } else if (cmd === 'insertUnorderedList') {
+        active = document.queryCommandState('insertUnorderedList');
+      } else if (cmd === 'insertOrderedList') {
+        active = document.queryCommandState('insertOrderedList');
+      }
+    } catch(e) {}
+    btn.classList.toggle('is-active', active);
+  });
+}
+
+/* ── Copy Content ── */
+function getEditorText() {
+  const body = document.getElementById('editorBody');
+  // Walk through all nodes and convert to text preserving empty lines
+  let text = '';
+  function walk(node) {
+    if (node.nodeType === 3) {
+      // Text node — skip zero-width spaces
+      text += node.textContent.replace(/\u200B/g, '');
+    } else if (node.nodeType === 1) {
+      if (node.tagName === 'BR') {
+        text += '\n';
+      } else if (node.tagName === 'DIV' || node.tagName === 'P') {
+        if (text.length && !text.endsWith('\n')) text += '\n';
+        node.childNodes.forEach(walk);
+        if (!text.endsWith('\n')) text += '\n';
+        return;
+      }
+      node.childNodes.forEach(walk);
+    }
+  }
+  body.childNodes.forEach(walk);
+  // Remove trailing newline from sentinel <br>
+  if (text.endsWith('\n')) text = text.slice(0, -1);
+  return text;
+}
+function copyContent() {
+  const text = getEditorText();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const label = document.getElementById('copyLabel');
+    btn.classList.add('copied');
+    label.textContent = 'Kopiert!';
+    setTimeout(() => { btn.classList.remove('copied'); label.textContent = 'Kopieren'; }, 1500);
+  });
+}
+
+/* ── Line Numbers (live, synced) ── */
+function updateLineNumbers() {
+  const body = document.getElementById('editorBody');
+  const ln = document.getElementById('lineNumbers');
+  if (!body || !ln) return;
+  const text = body.innerText;
+  const count = (text.match(/\n/g) || []).length + 1;
+  const cur = ln.children.length;
+  if (count === cur) return;
+  if (count > cur) {
+    const frag = document.createDocumentFragment();
+    for (let i = cur + 1; i <= count; i++) {
+      const s = document.createElement('span');
+      s.textContent = i;
+      frag.appendChild(s);
+    }
+    ln.appendChild(frag);
+  } else {
+    while (ln.children.length > count) ln.removeChild(ln.lastChild);
+  }
+}
+
+/* ── Scroll sync + input tracking ── */
+function initEditorSync() {
+  const body = document.getElementById('editorBody');
+  const area = document.querySelector('.editor-area');
+  const ln = document.getElementById('lineNumbers');
+  if (!body || !area || !ln) return;
+
+  body.addEventListener('input', () => { updateLineNumbers(); updateToolbarState(); });
+  document.addEventListener('selectionchange', () => {
+    if (document.getElementById('editorOverlay').classList.contains('open')) updateToolbarState();
+  });
+
+  area.addEventListener('scroll', () => {
+    ln.style.transform = 'translateY(' + (-area.scrollTop) + 'px)';
+  });
+}
+
+// Force <br> instead of <div> for Enter
+try { document.execCommand('defaultParagraphSeparator', false, 'br'); } catch(e) {}
+document.getElementById('editorBody').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const br = document.createElement('br');
+    range.insertNode(br);
+    // Always insert a zero-width space after <br> so caret lands on new line
+    let anchor = br.nextSibling;
+    if (!anchor || (anchor.nodeType === 1 && anchor.tagName === 'BR' && !anchor.nextSibling)) {
+      anchor = document.createTextNode('\u200B');
+      br.parentNode.insertBefore(anchor, br.nextSibling);
+    }
+    range.setStartAfter(br);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    updateLineNumbers();
+  }
+});
+
+// Strip background colors and unwanted styles from pasted content
+document.getElementById('editorBody').addEventListener('paste', e => {
+  const html = e.clipboardData.getData('text/html');
+  if (!html) return; // plain text paste — let browser handle it
+  e.preventDefault();
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('*').forEach(el => {
+    el.style.removeProperty('background');
+    el.style.removeProperty('background-color');
+    el.style.removeProperty('color');
+    el.style.removeProperty('font-family');
+    el.style.removeProperty('font-size');
+    el.style.removeProperty('line-height');
+    // Remove Google Docs / web page specific attributes
+    el.removeAttribute('class');
+    el.removeAttribute('id');
+  });
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const frag = range.createContextualFragment(tmp.innerHTML);
+  range.insertNode(frag);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  updateLineNumbers();
+});
+
+// Same paste handler for prefill editor
+document.getElementById('cPrefill').addEventListener('paste', e => {
+  const html = e.clipboardData.getData('text/html');
+  if (!html) return;
+  e.preventDefault();
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('*').forEach(el => {
+    el.style.removeProperty('background');
+    el.style.removeProperty('background-color');
+    el.style.removeProperty('color');
+    el.style.removeProperty('font-family');
+    el.style.removeProperty('font-size');
+    el.style.removeProperty('line-height');
+    el.removeAttribute('class');
+    el.removeAttribute('id');
+  });
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const frag = range.createContextualFragment(tmp.innerHTML);
+  range.insertNode(frag);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+
+// Close modals on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeCreate(); closeEditor(); }
+});
+
+// Init
+updateLineNumbers();
+initEditorSync();
+initToolbar();
+initPrefillToolbar();
+startCountdown(7);
+</script>
+</body>
+</html>
