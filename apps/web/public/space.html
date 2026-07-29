@@ -14,7 +14,7 @@
 </head>
 <body>
   <!-- malziSPACE header (based on malzilink) -->
-  <div class="topbar">
+  <header class="topbar">
     <div class="inner">
       <div class="brand">
         <a href="https://malzi.space">
@@ -22,10 +22,10 @@
         </a>
       </div>
     </div>
-  </div>
+  </header>
 
   <div class="shell">
-    <header class="toolbar card stuck">
+    <div class="toolbar card stuck">
       <div class="line-1">
         <span id="titleLabel" class="title-label" hidden data-i18n="space.title.label">Titel</span>
         <span id="titleView" class="title" hidden></span>
@@ -66,10 +66,10 @@
             <span data-i18n="space.button.share">Teilen</span>
           </button>
         </div>
-        <span id="presence" class="pill">…</span>
+        <span id="presence" class="pill" role="status" aria-label="Anwesende Personen" data-i18n-aria-label="space.presence.aria">…</span>
         <span id="status" class="status-dot status-dot--ok" role="status" title="Verbunden" data-i18n-title="status.connected" aria-label="Verbunden" data-i18n-aria-label="status.connected"></span>
       </div>
-    </header>
+    </div>
 
     <div id="expiredNotice" class="expired-banner" hidden>
       <span data-i18n="space.expired.notice">Dieser Space ist abgelaufen und wurde nach 24&nbsp;Stunden automatisch gelöscht.</span>
@@ -106,6 +106,7 @@
     </div>
 
     <main class="card editor-wrap">
+      <h1 class="sr-only" data-i18n="space.heading">malziSPACE Editor</h1>
       <div id="editorToolbar" class="editor-tools" role="toolbar" aria-label="Textformatierung" data-i18n-aria-label="toolbar.aria">
         <div class="tool-group" aria-label="Textstil" data-i18n-aria-label="toolbar.group.textStyle">
           <button type="button" class="tool-btn icon" data-cmd="bold" title="Fett" aria-label="Fett" data-i18n-title="toolbar.bold" data-i18n-aria-label="toolbar.bold"><span class="btn-icon txt" aria-hidden="true"><strong>B</strong></span></button>
@@ -190,9 +191,12 @@
       </section>
     </div>
 
-    <footer class="muted center">
+    <!-- One contentinfo landmark wraps all trailing page furniture. The inner
+         blocks stay plain <div>s so they do not register as extra landmarks. -->
+    <footer class="page-footer">
+    <div class="muted center">
       <small><span data-i18n="footer.countdown">Automatische Löschung in</span> <span id="countdown">—:—:—</span></small>
-    </footer>
+    </div>
 
     <div class="opensource-box">
       <a href="https://github.com/malziland/malzispace" target="_blank" rel="noopener noreferrer" class="opensource-link">
@@ -207,7 +211,7 @@
       <a href="https://buymeacoffee.com/malzispace" target="_blank" rel="noopener noreferrer" class="support-btn" data-i18n="support.button">Jetzt Projekt unterst&uuml;tzen</a>
     </div>
 
-    <footer class="site-footer">
+    <div class="site-footer">
       <div class="footer-inner">
         <span class="footer-copy">&copy; 2026 malziSPACE &bull; powered by malziland</span>
         <span class="footer-sep">&middot;</span>
@@ -217,6 +221,7 @@
         <span class="footer-sep">&middot;</span>
         <a href="agb.html" data-i18n="site.footer.terms">Nutzungsbedingungen</a>
       </div>
+    </div>
     </footer>
   </div>
 
