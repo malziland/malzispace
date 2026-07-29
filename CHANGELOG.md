@@ -2,6 +2,35 @@
 
 Alle relevanten Aenderungen an malziSPACE werden hier dokumentiert.
 
+## [1.4.3] - 2026-07-29
+
+Nachpruefung von 1.4.2: die A11y-Pruefung deckte nur 2 von 8 Seiten ab. Auf den
+uebrigen Seiten lagen 14 Verstoesse — darunter vier kaputte Links in den
+Rechtstexten.
+
+### Fixed
+- **Kaputte Links in Datenschutz und AGB (DE + EN).** In
+  `assets/site-i18n-dicts.js` standen typografische statt gerader
+  Anfuehrungszeichen in HTML-Attributen (`<a href=”impressum.html”>`), wodurch
+  der Browser den gesamten Attributwert inklusive Quotes als Ziel nahm. Betroffen
+  waren der Impressum-Link im Datenschutztext, `https://malzi.space`, der Link
+  zur Datenschutzerklaerung und der **rechtlich vorgeschriebene EU-ODR-Link**
+  in den AGB; bei letzterem waren zusaetzlich `target` und `rel` zerschossen.
+  12 Attribute in 8 Links korrigiert.
+- **Links im Rechtstext waren nur farblich erkennbar** (WCAG 1.4.1, axe
+  `link-in-text-block`, serious): `text-decoration` von `none` auf `underline`
+  in `.legal-section a`, `.legal-page a` und `.legal-block a`.
+- **Impressum, Datenschutz und AGB hatten kein `main`-Landmark** und Inhalte
+  ausserhalb jedes Landmarks — gleiche Struktur wie in 1.4.2 fuer `space.html`:
+  `main.legal-page` plus ein `footer.page-footer` fuer die nachlaufenden Boxen.
+- **editor-simulator.html:** `aria-label` auf einem Element ohne erlaubte Rolle
+  (axe `aria-prohibited-attr`, serious) und ein zweites `banner`-Landmark.
+
+### Changed
+- **A11y-Gate prueft jetzt alle Seiten** statt nur Landing + Editor. Genau diese
+  Luecke hatte die obigen Fehler unbemerkt durchgehen lassen. Alle sieben
+  ausgelieferten Seiten melden nun null Verstoesse und null Advisories.
+
 ## [1.4.2] - 2026-07-29
 
 Aufloesung des Dependabot-Rueckstaus (15 offene PRs, keiner mergebar),

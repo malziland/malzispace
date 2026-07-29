@@ -171,11 +171,39 @@ async function checkEditor(browser) {
   }
 }
 
+// Every other shipped page. The landing page and the editor get the dedicated
+// checks above (they also exercise keyboard paths); these are scanned for axe
+// violations only. Without this list a page like privacy.html could regress
+// unnoticed — which is exactly how four broken legal-text links and three
+// missing main landmarks survived until 2026-07-29.
+const OTHER_PAGES = [
+  'impressum.html',
+  'privacy.html',
+  'agb.html',
+  'reset-cache.html',
+  'editor-simulator.html',
+];
+
+async function checkStaticPage(browser, name) {
+  const page = await browser.newPage();
+  try {
+    await stripCsp(page);
+    await page.goto(`${BASE_URL}/${name}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(300);
+    await runAxe(page, name.replace(/\.html$/, ''));
+  } finally {
+    await page.close();
+  }
+}
+
 async function main() {
   const browser = await launchChromiumBrowser();
   try {
     await checkLanding(browser);
     await checkEditor(browser);
+    for (const name of OTHER_PAGES) {
+      await checkStaticPage(browser, name);
+    }
   } finally {
     await browser.close().catch(() => {});
   }

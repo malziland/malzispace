@@ -15,17 +15,17 @@
       <div id="simResults" class="sim-results" data-i18n="sim.results.running">Tests laufen …</div>
     </header>
 
-    <header class="toolbar card stuck">
+    <div class="toolbar card stuck" role="region" aria-label="Space-Aktionen" data-i18n-aria-label="space.toolbar.aria">
       <div class="line-1">
         <span class="title-label" data-i18n="space.title.label">Titel</span>
         <span id="titleView" class="title" contenteditable="true" spellcheck="false" data-placeholder="Ohne Titel" data-i18n-placeholder="space.title.placeholder"></span>
         <div class="toolbar-actions">
           <button id="showQr" class="btn" type="button" data-i18n="space.button.share">Teilen</button>
         </div>
-        <span id="presence" class="pill">…</span>
-        <span id="status" class="status-dot status-dot--ok" title="Verbunden" data-i18n-title="status.connected" aria-label="Verbunden" data-i18n-aria-label="status.connected"></span>
+        <span id="presence" class="pill" role="status" aria-label="Anwesende Personen" data-i18n-aria-label="space.presence.aria">…</span>
+        <span id="status" class="status-dot status-dot--ok" role="status" title="Verbunden" data-i18n-title="status.connected" aria-label="Verbunden" data-i18n-aria-label="status.connected"></span>
       </div>
-    </header>
+    </div>
 
     <div id="expiredNotice" class="expired-banner" hidden>
       <span data-i18n="space.expired.notice">Dieser Space ist abgelaufen und wurde nach 24&nbsp;Stunden automatisch gelöscht.</span>

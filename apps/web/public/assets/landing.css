@@ -53,12 +53,12 @@ a{color:#dbeafe;text-decoration:none}
 }
 .legal-section a{
   color:var(--accent);
-  text-decoration:none;
+  text-decoration:underline;
 }
 .legal-section a:hover{ text-decoration:underline; }
 .legal-page a:not(.back-link){
   color:var(--accent);
-  text-decoration:none;
+  text-decoration:underline;
 }
 .legal-page a:not(.back-link):hover{ text-decoration:underline; }
 .legal-block{
@@ -77,7 +77,7 @@ a{color:#dbeafe;text-decoration:none}
 .legal-block p:last-child{ margin-bottom:0; }
 .legal-block a{
   color:var(--accent);
-  text-decoration:none;
+  text-decoration:underline;
 }
 .legal-block a:hover{ text-decoration:underline; }
 .legal-block--highlight{
