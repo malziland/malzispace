@@ -137,3 +137,19 @@ npm ci
 (cd services/api && npm ci --no-workspaces)
 (cd services/collab-relay && npm ci --no-workspaces)
 ```
+
+## Automation
+
+`.github/dependabot.yml` groups updates per manifest, monthly. Each group
+produces one PR: patch/minor in one, majors in a separate one.
+
+`.github/workflows/dependabot-auto-merge.yml` arms GitHub auto-merge on
+Dependabot PRs that contain no semver-major change. Auto-merge only *queues*
+the PR — branch protection on `main` still requires the `verify` and
+`secret-scan` checks to pass, so a red pipeline blocks the merge exactly as it
+would for a human PR. Major updates are left open with a comment.
+
+Repository settings this depends on (both enabled):
+
+- `allow_auto_merge` — without it `gh pr merge --auto` fails
+- `delete_branch_on_merge` — keeps merged `dependabot/*` branches from piling up

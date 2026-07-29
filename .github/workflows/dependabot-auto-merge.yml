@@ -1,0 +1,45 @@
+# Auto-merge Dependabot PRs that carry no semver-major change.
+#
+# This only *arms* auto-merge. GitHub still holds the PR until the required
+# checks on main (verify, secret-scan) are green, so a red pipeline blocks the
+# merge exactly as it would for a human PR. Majors are left open on purpose.
+#
+# Workflows triggered by Dependabot get a read-only token by default; the
+# explicit permissions block below is what grants write. `on: pull_request` is
+# sufficient — pull_request_target is not needed and would be less safe, since
+# it would run with repository write access in the base-branch context.
+name: dependabot-auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge (patch/minor only)
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Explain why a major was left open
+        if: steps.meta.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr comment "$PR_URL" --body \
+            "Major version update — not auto-merged. Review the changelog, then merge manually."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

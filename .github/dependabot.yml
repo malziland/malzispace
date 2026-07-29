@@ -1,22 +1,64 @@
+# Dependency updates.
+#
+# The three npm entries map 1:1 onto the three independent manifests (see
+# docs/ops/DEPENDENCIES.md). services/api and services/collab-relay are NOT
+# workspace members, so each PR touches exactly one manifest + one lockfile and
+# is mergeable on its own. Do not re-add them to the root `workspaces` array.
+#
+# Everything is grouped so a routine week produces a handful of PRs instead of
+# a dozen. Patch and minor updates are auto-merged once CI is green
+# (.github/workflows/dependabot-auto-merge.yml); majors are grouped separately
+# and always need a human.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      root-tooling:
+        patterns: ['*']
+        update-types: [minor, patch]
+      root-tooling-major:
+        patterns: ['*']
+        update-types: [major]
+
   - package-ecosystem: npm
     directory: /services/api
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      api:
+        patterns: ['*']
+        update-types: [minor, patch]
+      api-major:
+        patterns: ['*']
+        update-types: [major]
+
   - package-ecosystem: npm
     directory: /services/collab-relay
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      collab-relay:
+        patterns: ['*']
+        update-types: [minor, patch]
+      collab-relay-major:
+        patterns: ['*']
+        update-types: [major]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [minor, patch]
+      actions-major:
+        patterns: ['*']
+        update-types: [major]
