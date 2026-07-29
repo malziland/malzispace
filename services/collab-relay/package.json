@@ -10,7 +10,11 @@
     "node": "24"
   },
   "dependencies": {
-    "firebase-admin": "^14.1.0",
-    "ws": "^8.20.0"
+    "firebase-admin": "^14.2.0",
+    "ws": "^8.21.0"
+  },
+  "overrides": {
+    "rimraf": "^6.1.3",
+    "uuid": "^11.1.0"
   }
 }
